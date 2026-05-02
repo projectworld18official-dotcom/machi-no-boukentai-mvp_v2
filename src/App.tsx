@@ -1,17 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BattleScreen, { type BattleResult } from "./components/BattleScreen";
-import CollectionScreen from "./components/CollectionScreen";
+import CharacterPreviewScreen from "./components/CharacterPreviewScreen";
+import CharacterSelectScreen from "./components/CharacterSelectScreen";
 import GachaScreen from "./components/GachaScreen";
 import HeroNameModal from "./components/HeroNameModal";
 import HomeScreen from "./components/HomeScreen";
 import PartySetupScreen from "./components/PartySetupScreen";
+import FirstLoginModal from "./components/FirstLoginModal";
 import { useGameState } from "./hooks/useGameState";
 import { heroStats, jobStats } from "./data/jobs";
-import type { JobsState, PartyState, SaveData } from "./types";
+import type {
+  EquippedSkins,
+  JobsState,
+  PartyMemberId,
+  PartyState,
+  SaveData
+} from "./types";
+import type { GachaPullResult } from "./logic/cosmeticGacha";
 
-type Screen = "home" | "battle" | "gacha" | "collection" | "partySetup";
+type Screen =
+  | "home"
+  | "battle"
+  | "gacha"
+  | "characterSelect"
+  | "characterPreview"
+  | "partySetup";
 
 const EXP_PER_LEVEL = 100;
+const FIRST_LOGIN_BONUS = 100;
 
 const applyExpToHero = (hero: SaveData["hero"], exp: number): SaveData["hero"] => {
   let level = hero.level;
@@ -73,28 +89,42 @@ const applyExpToJob = (
 export default function App() {
   const { data, setData } = useGameState();
   const [screen, setScreen] = useState<Screen>("home");
-  const [latest, setLatest] = useState<string[]>([]);
+  const [previewMemberId, setPreviewMemberId] = useState<PartyMemberId | null>(null);
+  const [stageBonus, setStageBonus] = useState<{ stage: number; gems: number } | null>(null);
+  const [firstLoginShown, setFirstLoginShown] = useState(false);
 
-  const addResult = (ids: string[], cost: number): void => {
-    if (data.gems < cost) return;
+  // 初回ログインボーナス処理: nameSet 完了後の初回 home 表示で一度だけ
+  useEffect(() => {
+    if (
+      data.hero.nameSet &&
+      !data.rewards.firstLoginClaimed &&
+      !firstLoginShown
+    ) {
+      setFirstLoginShown(true);
+    }
+  }, [data.hero.nameSet, data.rewards.firstLoginClaimed, firstLoginShown]);
 
-    const owned = new Set(data.ownedIds);
-    const levels = { ...data.levels };
-
-    ids.forEach((id) => {
-      owned.add(id);
-      if (typeof levels[id] !== "number") levels[id] = 1;
-    });
-
+  const handleClaimFirstLogin = (): void => {
     setData({
       ...data,
-      gems: data.gems - cost,
-      ownedIds: [...owned],
-      levels,
-      gachaHistory: [...ids, ...data.gachaHistory].slice(0, 30)
+      gems: data.gems + FIRST_LOGIN_BONUS,
+      rewards: { ...data.rewards, firstLoginClaimed: true }
     });
+  };
 
-    setLatest(ids);
+  // === コスメガチャ結果反映 ===
+  const handlePullComplete = (r: { newOwned: string[]; refund: number; cost: number; pulls: GachaPullResult[] }): void => {
+    if (data.gems < r.cost) return;
+    const owned = { ...data.skins.owned };
+    r.newOwned.forEach((id) => {
+      owned[id] = true;
+    });
+    setData({
+      ...data,
+      gems: data.gems - r.cost + r.refund,
+      gachaHistory: [...r.pulls.map((p) => p.skinId), ...data.gachaHistory].slice(0, 30),
+      skins: { ...data.skins, owned }
+    });
   };
 
   const handlePartyChange = (party: PartyState): void => {
@@ -108,9 +138,18 @@ export default function App() {
     });
   };
 
+  const handleEquipSkin = (
+    member: PartyMemberId,
+    slot: keyof EquippedSkins,
+    skinId: string | null
+  ): void => {
+    const equipped = { ...data.skins.equipped };
+    equipped[member] = { ...equipped[member], [slot]: skinId };
+    setData({ ...data, skins: { ...data.skins, equipped } });
+  };
+
   const handleBattleFinish = (result: BattleResult): void => {
     if (result.outcome === "victory") {
-      // 戦闘終了処理: HP/MP 反映、EXP 配分、MP 30% 自動回復、battleStage++
       let newHero = { ...data.hero };
       let newJobs: JobsState = { ...data.jobs };
 
@@ -145,7 +184,7 @@ export default function App() {
         }
       });
 
-      // EXP 配分 (パーティ全員)
+      // EXP 配分
       newHero = applyExpToHero(newHero, result.expGain);
       result.allyFinal.forEach((af) => {
         if (af.memberId !== "hero") {
@@ -153,24 +192,43 @@ export default function App() {
         }
       });
 
+      // gems 計算: 基本勝利 + ステージ初回クリアボーナス
+      const enemiesCount = result.allyFinal.length; // パーティ人数 (敵数の代理として stage で算出)
+      const stageId = String(data.battleStage);
+      const isFirstClear = !data.rewards.stagesCleared[stageId];
+      const battleGems = Math.floor(data.battleStage * 3 + enemiesCount * 5);
+      const stageBonusGems = isFirstClear ? 30 : 0;
+
+      const stagesCleared = { ...data.rewards.stagesCleared };
+      if (isFirstClear) stagesCleared[stageId] = true;
+
       setData({
         ...data,
-        gems: data.gems + 50,
+        gems: data.gems + battleGems + stageBonusGems,
         battleStage: data.battleStage + 1,
         hero: newHero,
-        jobs: newJobs
+        jobs: newJobs,
+        rewards: { ...data.rewards, stagesCleared }
       });
+
+      if (isFirstClear) {
+        setStageBonus({ stage: data.battleStage, gems: stageBonusGems });
+      }
     } else {
-      // 敗北: HP/MP は戦闘前に戻す (簡易、ステージは進めない)
-      let newHero = { ...data.hero, hp: data.hero.maxHp };
-      let newJobs: JobsState = {
+      // 敗北: HP は満タン復活、MP も 30% 回復に統一 (Phase 2c-1 reviewer 指摘#9-A 対応)
+      const newHero = { ...data.hero, hp: data.hero.maxHp };
+      const restoredMageMp = Math.min(
+        data.jobs.mage.maxMp,
+        data.jobs.mage.mp + Math.floor(data.jobs.mage.maxMp * 0.3)
+      );
+      const newJobs: JobsState = {
         ...data.jobs,
         warrior: { ...data.jobs.warrior, hp: data.jobs.warrior.maxHp },
         monk: { ...data.jobs.monk, hp: data.jobs.monk.maxHp },
         mage: {
           ...data.jobs.mage,
           hp: data.jobs.mage.maxHp,
-          mp: Math.min(data.jobs.mage.maxMp, data.jobs.mage.mp + Math.floor(data.jobs.mage.maxMp * 0.3))
+          mp: restoredMageMp
         },
         youtuber: { ...data.jobs.youtuber, hp: data.jobs.youtuber.maxHp }
       };
@@ -185,12 +243,31 @@ export default function App() {
     <div className="app">
       {showNameModal && <HeroNameModal onConfirm={handleHeroNameConfirm} />}
 
+      {!showNameModal &&
+        firstLoginShown &&
+        !data.rewards.firstLoginClaimed && (
+          <FirstLoginModal
+            amount={FIRST_LOGIN_BONUS}
+            onClaim={handleClaimFirstLogin}
+          />
+        )}
+
+      {!showNameModal && stageBonus && (
+        <FirstLoginModal
+          amount={stageBonus.gems}
+          title={`ステージ ${stageBonus.stage} はじめてクリア!`}
+          subtitle="ボーナスをもらった!"
+          onClaim={() => setStageBonus(null)}
+        />
+      )}
+
       {!showNameModal && screen === "home" && (
         <HomeScreen
           onMove={(s) => setScreen(s as Screen)}
           hero={data.hero}
           jobs={data.jobs}
           party={data.party}
+          gems={data.gems}
         />
       )}
 
@@ -220,16 +297,33 @@ export default function App() {
       {!showNameModal && screen === "gacha" && (
         <GachaScreen
           gems={data.gems}
-          addResult={addResult}
-          latest={latest}
+          skins={data.skins}
+          onPullComplete={handlePullComplete}
           back={() => setScreen("home")}
         />
       )}
 
-      {!showNameModal && screen === "collection" && (
-        <CollectionScreen
-          ownedIds={data.legacyChars.ownedIds}
+      {!showNameModal && screen === "characterSelect" && (
+        <CharacterSelectScreen
+          hero={data.hero}
+          jobs={data.jobs}
+          skinsState={data.skins}
+          onPick={(id) => {
+            setPreviewMemberId(id);
+            setScreen("characterPreview");
+          }}
           back={() => setScreen("home")}
+        />
+      )}
+
+      {!showNameModal && screen === "characterPreview" && previewMemberId && (
+        <CharacterPreviewScreen
+          memberId={previewMemberId}
+          hero={data.hero}
+          jobs={data.jobs}
+          skinsState={data.skins}
+          onEquip={handleEquipSkin}
+          back={() => setScreen("characterSelect")}
         />
       )}
     </div>

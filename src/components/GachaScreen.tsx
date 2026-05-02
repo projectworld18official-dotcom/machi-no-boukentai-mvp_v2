@@ -1,55 +1,55 @@
-import { useEffect } from "react";
-import { getCharacter } from "../data/characters";
+import { useEffect, useState } from "react";
+import type { Rarity, SkinsState } from "../types";
+import { getSkin } from "../data/skins";
 import {
   GACHA_COST_SINGLE,
   GACHA_COST_TEN,
-  rarityText,
-  rollSingle,
-  rollTen
-} from "../data/gacha";
+  evaluatePulls,
+  rollSingleSkin,
+  rollTenSkins,
+  type GachaPullResult
+} from "../logic/cosmeticGacha";
 import { playBGM, playSE, stopBGM } from "../utils/audio";
+import { jobsMaster } from "../data/jobs";
 
 interface Props {
   gems: number;
-  addResult: (ids: string[], cost: number) => void;
+  skins: SkinsState;
+  onPullComplete: (result: { newOwned: string[]; refund: number; cost: number; pulls: GachaPullResult[] }) => void;
   back: () => void;
-  latest: string[];
 }
 
-export default function GachaScreen({
-  gems,
-  addResult,
-  back,
-  latest
-}: Props) {
+const rarityLabel = (r: Rarity): string => {
+  if (r === 5) return "超レア";
+  if (r === 4) return "レア";
+  return "ノーマル";
+};
+
+const rarityClassname = (r: Rarity): string => `effect${r}`;
+const rarityCapsuleClass = (r: Rarity): string => `rarity${r}`;
+
+export default function GachaScreen({ gems, skins, onPullComplete, back }: Props) {
+  const [latest, setLatest] = useState<GachaPullResult[]>([]);
+
   useEffect(() => {
     playBGM("home");
-
     return () => {
       stopBGM();
     };
   }, []);
 
-  useEffect(() => {
-    if (latest.length === 0) return;
-
-    playSE("gacha");
-  }, [latest]);
-
   const pull = (single: boolean): void => {
-    if (single) {
-      const cost = GACHA_COST_SINGLE;
+    const cost = single ? GACHA_COST_SINGLE : GACHA_COST_TEN;
+    if (gems < cost) return;
 
-      if (gems < cost) return;
+    const ids = single ? [rollSingleSkin()] : rollTenSkins();
+    const evaluated = evaluatePulls(ids, skins.owned);
+    const newOwned = evaluated.filter((p) => !p.duplicate).map((p) => p.skinId);
+    const refund = evaluated.reduce((s, p) => s + p.refundGems, 0);
 
-      addResult([rollSingle()], cost);
-    } else {
-      const cost = GACHA_COST_TEN;
-
-      if (gems < cost) return;
-
-      addResult(rollTen(), cost);
-    }
+    setLatest(evaluated);
+    playSE("gacha");
+    onPullComplete({ newOwned, refund, cost, pulls: evaluated });
   };
 
   const handleBack = (): void => {
@@ -57,51 +57,52 @@ export default function GachaScreen({
     back();
   };
 
-  const topRarity = latest.reduce(
-    (max, id) => Math.max(max, getCharacter(id).rarity),
-    0
-  );
+  const topRarity = latest.reduce((max, p) => Math.max(max, p.rarity), 0 as number);
 
   return (
     <div className="card screen">
-      <h2>ガチャ</h2>
+      <h2>コスメガチャ</h2>
       <p>💎 {gems}</p>
-      <p>{rarityText()}</p>
+      <p>★5=6% / ★4=24% / ★3=70%（10連は最後の1体が最低★4）</p>
+      <p className="gachaHelp">スキン40種から排出！ 同じものは gems 返還!</p>
 
-      <button
-        onClick={() => pull(true)}
-        disabled={gems < GACHA_COST_SINGLE}
-      >
+      <button onClick={() => pull(true)} disabled={gems < GACHA_COST_SINGLE}>
         単発 30
       </button>
-
-      <button
-        onClick={() => pull(false)}
-        disabled={gems < GACHA_COST_TEN}
-      >
+      <button onClick={() => pull(false)} disabled={gems < GACHA_COST_TEN}>
         10連 300
       </button>
 
       <div className="resultBox">
-        {latest.map((id, i) => {
-          const c = getCharacter(id);
-
+        {latest.map((p, i) => {
+          const skin = getSkin(p.skinId);
+          if (!skin) return null;
+          const charDisplay = skin.charId === "hero" ? "🦸" : jobsMaster[skin.charId].emoji;
+          const isGradient = (skin.bodyColor ?? "").startsWith("linear-gradient");
           return (
             <div
-              key={`${id}-${i}`}
-              className={`capsule rarity${c.rarity} effect${c.rarity}`}
-              style={{ background: c.color }}
+              key={`${p.skinId}-${i}`}
+              className={`capsule ${rarityCapsuleClass(p.rarity)} ${rarityClassname(p.rarity)}`}
+              style={{
+                background: isGradient
+                  ? skin.bodyColor
+                  : skin.bodyColor ?? skin.effectColor ?? "#5b8def",
+                opacity: p.duplicate ? 0.65 : 1
+              }}
             >
-              <div className="big">{c.emoji}</div>
-              <div>{c.name}</div>
-              <div>★{c.rarity}</div>
+              <div className="big">{charDisplay}</div>
+              <div>{skin.name}</div>
+              <div>★{skin.rarity} {rarityLabel(p.rarity)}</div>
+              {p.duplicate && (
+                <div className="duplicateLabel">すでにもっている! +{p.refundGems}💎</div>
+              )}
             </div>
           );
         })}
       </div>
 
       {topRarity === 5 && latest.length > 0 && (
-        <div key={`burst-${latest.join("-")}`} className="rainbowBurst" />
+        <div key={`burst-${latest.map((l) => l.skinId).join("-")}`} className="rainbowBurst" />
       )}
 
       <button onClick={handleBack}>もどる</button>

@@ -543,6 +543,204 @@ button:disabled {
   display: inline-block;
 }
 
+/* === Phase 2d Home/Preview/Gacha 追加 === */
+.homeGems {
+  font-size: 18px;
+  font-weight: bold;
+  color: #b8860b;
+  background: #fffbe5;
+  padding: 4px 10px;
+  border-radius: 8px;
+  display: inline-block;
+  margin: 6px 0;
+}
+
+.charSelectRow--wrap {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.skinCountBadge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 6px;
+}
+
+.previewHero {
+  border: 4px solid transparent;
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  position: relative;
+  margin: 8px 0;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.previewEmoji {
+  font-size: 80px;
+  line-height: 1;
+}
+
+.previewName {
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 4px;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.previewSpecialBadge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  color: #222;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.previewTabs {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.previewTabButton {
+  flex: 1 1 0;
+  background: #e0e4eb;
+  color: #555;
+  font-size: 14px;
+  margin-top: 0;
+  padding: 8px;
+}
+
+.previewTabButton--active {
+  background: #2d7cff;
+  color: #fff;
+}
+
+.skinGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+
+.skinCard {
+  background: #f6f8ff;
+  border: 2px solid #d0d6e0;
+  border-radius: 10px;
+  padding: 6px 2px;
+  margin-top: 0;
+  text-align: center;
+  position: relative;
+  font-size: 11px;
+  color: #333;
+  box-shadow: none;
+}
+
+.skinCard:hover:not(:disabled) {
+  background: #f0f4ff;
+  transform: scale(1.04);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.skinCard--equipped {
+  border-color: #ffd400;
+  box-shadow: 0 0 8px rgba(255, 212, 0, 0.6);
+}
+
+.skinCard--locked {
+  opacity: 0.6;
+}
+
+.skinSwatch {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  margin-bottom: 2px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.skinLockMark {
+  color: #fff;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.skinCardName {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skinCardRarity {
+  font-size: 10px;
+  color: #b8860b;
+  font-weight: bold;
+}
+
+.skinEquippedLabel {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffd400;
+  color: #222;
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.skinHint {
+  background: #fff8d6;
+  color: #885500;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.gachaHelp {
+  font-size: 13px;
+  color: #555;
+  background: #f4f9ff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
+.duplicateLabel {
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.firstLoginBox h2 {
+  margin-top: 6px;
+}
+
+.firstLoginAmount {
+  font-size: 36px;
+  font-weight: 900;
+  color: #b8860b;
+  margin: 8px 0;
+}
+
 /* === Phase 2d 共通追加 === */
 .heroTag {
   position: absolute;
