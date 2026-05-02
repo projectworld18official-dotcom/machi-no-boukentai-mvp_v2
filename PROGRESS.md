@@ -51,3 +51,37 @@
 - TS ビルドエラー 0 件を各 Phase 終端で確認
 - 30 分以上同一エラーで詰まったら BLOCKED.md に記録 + 停止
 
+---
+
+## Phase 2a-2: 音源実装 (completed)
+- `npm install tone` → `tone@^15.1.22` 追加 (依存数 +5)
+- `src/utils/audio.ts` 新規 (SE 6 + BGM 2 + unlock + API 4 関数、Tone.MembraneSynth/NoiseSynth/MetalSynth/PolySynth/Part 使用)
+- `HomeScreen.tsx` を `unlockAudio()` 起動点に
+- ビルド OK (958 modules, 449 kB → 459 kB JS)
+- commit `cb0d588`
+
+## Phase 2a-3: バトル演出 (completed)
+- `BattleScreen.tsx`: ダメージ数字ポップアップ state、クリティカル 20% × 1.5、SE (attack/damage/levelup 連動)、battle BGM mount/unmount
+- `app.css`: `.popupLayer`, `.damagePopup`, `.damagePopup.critical`, `@keyframes damagePop`
+- ビルド OK
+- commit `1d020dd`
+
+## Phase 2a-4: ガチャ演出 + UI 改善 (completed)
+- `GachaScreen.tsx`: レアリティ別 effect クラス付与、SE 連動、5★ 時 rainbowBurst オーバーレイ、home BGM mount/unmount
+- `CollectionScreen.tsx`: cancel SE + screen クラス
+- `app.css`: button hover (scale1.05+glow) / active (scale0.95) / disabled、screen fade-in 200ms、`.effect3/4/5` (青/金/虹のスケール+ボックスシャドウ keyframes)、`.rainbowBurst` 全画面演出
+- ビルド OK
+- commit `b64feee`
+
+## Phase 2a-5: レベルアップ演出 (completed)
+- `BattleScreen.tsx`: `triggerLevelUp()` で 1.5 秒バナー表示、勝利時に levelup SE と同時発火
+- `app.css`: `.levelUpBanner` + `@keyframes levelUpBanner` (中央表示、フェードイン→ホールド→フェードアウト)
+- ビルド OK
+- commit `496b412`
+
+## Phase 2a-6: レビュー (completed)
+reviewer subagent 結果:
+- **PASS**: ビルド成功、TS 型安全 (any なし)、データファイル無改変 (characters.ts/gacha.ts)、設定ファイル無改変 (vercel.json/vite.config.ts/tsconfig.json)、追加依存は `tone` のみ、iOS unlock パターン適切 (await Tone.start() in user gesture)、越境変更なし、deny 違反なし
+- **WARN 4 件**: GachaScreen の `showResults` state 不要 (修正済 → `.show` 関連を削除、ロジック簡素化、再ビルド OK)、useEffect 空 deps の eslint-disable 未付与 (現状 lint 通過)、敗北 state 未実装 (Phase 2a 範囲外)、SE 用 setTimeout dispose は冪等で実害なし
+- **FAIL**: 0 件 → デプロイ可
+

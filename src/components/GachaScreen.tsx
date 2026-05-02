@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { getCharacter } from "../data/characters";
 import {
   GACHA_COST_SINGLE,
@@ -22,8 +22,6 @@ export default function GachaScreen({
   back,
   latest
 }: Props) {
-  const [showResults, setShowResults] = useState(false);
-
   useEffect(() => {
     playBGM("home");
 
@@ -35,12 +33,7 @@ export default function GachaScreen({
   useEffect(() => {
     if (latest.length === 0) return;
 
-    setShowResults(true);
     playSE("gacha");
-
-    const timer = setTimeout(() => setShowResults(true), 50);
-
-    return () => clearTimeout(timer);
   }, [latest]);
 
   const pull = (single: boolean): void => {
@@ -89,7 +82,7 @@ export default function GachaScreen({
         10連 300
       </button>
 
-      <div className={`resultBox ${showResults ? "show" : ""}`}>
+      <div className="resultBox">
         {latest.map((id, i) => {
           const c = getCharacter(id);
 
