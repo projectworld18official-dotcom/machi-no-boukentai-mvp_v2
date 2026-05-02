@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import type { HeroState, JobsState, PartyState } from "../types";
+import type { HeroState, JobsState, PartyState, SkinsState } from "../types";
 import { memberDisplayName, memberEmoji } from "../data/jobs";
+import { getSkin } from "../data/skins";
 import { playBGM, playSE, stopBGM, unlockAudio } from "../utils/audio";
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   jobs: JobsState;
   party: PartyState;
   gems: number;
+  skins: SkinsState;
   debugUnlocked?: boolean;
   onDebug?: () => void;
 }
@@ -19,6 +21,7 @@ export default function HomeScreen({
   jobs,
   party,
   gems,
+  skins,
   debugUnlocked,
   onDebug
 }: Props) {
@@ -58,11 +61,15 @@ export default function HomeScreen({
           const lv = isHero ? hero.level : jobs[m].level;
           const name = memberDisplayName(m, hero.name);
           const emoji = memberEmoji(m);
+          // 装備中の body スキン色を待機画面に反映 (Phase 2d-3)
+          const equippedBodyId = skins.equipped[m]?.body ?? null;
+          const equippedBodySkin = getSkin(equippedBodyId);
+          const cardBg = equippedBodySkin?.bodyColor ?? "#5b8def";
           return (
             <div
               key={m}
               className="charCard charCard--active"
-              style={{ background: "#5b8def", cursor: "default" }}
+              style={{ background: cardBg, cursor: "default" }}
             >
               {isHero && <span className="heroTag">主人公</span>}
               <span className="lvBadge">Lv.{lv}</span>

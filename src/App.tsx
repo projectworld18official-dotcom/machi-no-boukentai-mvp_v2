@@ -305,6 +305,7 @@ export default function App() {
           jobs={data.jobs}
           party={data.party}
           gems={data.gems}
+          skins={data.skins}
           debugUnlocked={debugUnlocked}
           onDebug={() => setScreen("debug")}
         />
