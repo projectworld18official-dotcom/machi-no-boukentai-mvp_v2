@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getCharacter } from "../data/characters";
 import { playBGM, playSE, stopBGM } from "../utils/audio";
+import Sprite from "./sprites/Sprite";
 
 interface Props {
   selectedId: string;
@@ -40,9 +41,21 @@ export default function BattleScreen({
   const popupId = useRef(0);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [heroState, setHeroState] = useState<"idle" | "attack">("idle");
   const lastTapRef = useRef(0);
   const clearTimerRef = useRef<number | null>(null);
   const finishedRef = useRef(false);
+  const attackTimerRef = useRef<number | null>(null);
+
+  const triggerAttackPose = (): void => {
+    if (attackTimerRef.current !== null) {
+      clearTimeout(attackTimerRef.current);
+    }
+    setHeroState("attack");
+    attackTimerRef.current = window.setTimeout(() => {
+      setHeroState("idle");
+    }, 280);
+  };
 
   const triggerLevelUp = (): void => {
     setShowLevelUp(true);
@@ -57,6 +70,9 @@ export default function BattleScreen({
 
       if (clearTimerRef.current !== null) {
         clearTimeout(clearTimerRef.current);
+      }
+      if (attackTimerRef.current !== null) {
+        clearTimeout(attackTimerRef.current);
       }
     };
   }, []);
@@ -130,6 +146,7 @@ export default function BattleScreen({
     const { dmg, critical } = rollCritical(hero.attack);
     const next = enemyHp - dmg;
 
+    triggerAttackPose();
     setEnemyHp(Math.max(0, next));
     setMsg(`${hero.name} のこうげき ${dmg} ダメージ${critical ? "！会心" : ""}`);
     addPopup(dmg, critical, "enemy");
@@ -148,6 +165,7 @@ export default function BattleScreen({
     if (isClearing) return;
     if (!guardTap()) return;
 
+    triggerAttackPose();
     const { dmg, critical } = rollCritical(hero.skillPower);
     const next = enemyHp - dmg;
 
@@ -180,7 +198,9 @@ export default function BattleScreen({
 
       <div className={`arena ${flash ? "flash" : ""}`}>
         <div className="fighter">
-          <div className="big">{hero.emoji}</div>
+          <div className="big spriteHost">
+            <Sprite character={hero} state={heroState} />
+          </div>
           <div>
             {hero.name} <span className="lvInline">Lv.{level}</span>
           </div>

@@ -486,3 +486,58 @@ button:disabled {
   transform: scale(1.04);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
+
+/* スプライト (Phase 2b) */
+.spriteHost {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 56px;
+  position: relative;
+  overflow: visible;
+  z-index: 1;
+}
+
+.spriteSheet {
+  display: block;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+@keyframes spriteFrames {
+  to { background-position: -100% 0; }
+}
+
+/* emoji フォールバック: 2 フレーム CSS keyframe で待機/攻撃モーション */
+.emojiSprite {
+  display: inline-block;
+  font-size: 34px;
+  line-height: 1;
+  transform-origin: bottom center;
+}
+
+.emojiSprite--idle {
+  animation: emojiIdle 900ms steps(2, jump-none) infinite;
+}
+
+.emojiSprite--attack {
+  animation: emojiAttack 280ms ease-out;
+}
+
+@keyframes emojiIdle {
+  0%   { transform: translateY(0)    scale(1, 1); }
+  50%  { transform: translateY(-4px) scale(1.04, 0.98); }
+  100% { transform: translateY(0)    scale(1, 1); }
+}
+
+@keyframes emojiAttack {
+  0%   { transform: translateX(0)    scale(1, 1)    rotate(0deg); }
+  35%  { transform: translateX(14px) scale(1.18, 0.94) rotate(-8deg); }
+  70%  { transform: translateX(8px)  scale(1.08, 1)  rotate(-4deg); }
+  100% { transform: translateX(0)    scale(1, 1)    rotate(0deg); }
+}
+
+.emojiSpriteGlyph {
+  display: inline-block;
+}

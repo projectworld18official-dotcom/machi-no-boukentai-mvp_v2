@@ -1,5 +1,15 @@
 export type Rarity = 3 | 4 | 5;
 
+export interface SpriteConfig {
+  idleSrc: string;
+  attackSrc: string;
+  frameCount: number;
+  frameWidth: number;
+  frameHeight: number;
+  idleDuration: number;
+  attackDuration: number;
+}
+
 export interface Character {
   id: string;
   name: string;
@@ -10,6 +20,7 @@ export interface Character {
   rarity: Rarity;
   color: string;
   emoji: string;
+  sprite?: SpriteConfig;
 }
 
 export interface SaveData {
