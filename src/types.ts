@@ -68,9 +68,28 @@ export interface LegacyCharsState {
   levels: Record<string, { level: number; exp: number }>;
 }
 
+// Phase 2d: スキンシステム
+export type SkinSlot = "body" | "weapon" | "special";
+
+export interface EquippedSkins {
+  body: string | null;
+  weapon: string | null;
+  special: string | null;
+}
+
+export interface SkinsState {
+  owned: Record<string, true>;
+  equipped: Record<PartyMemberId, EquippedSkins>;
+}
+
+export interface RewardsState {
+  firstLoginClaimed: boolean;
+  stagesCleared: Record<string, boolean>;
+}
+
 export interface SaveData {
   version: number;
-  // Phase 2b 互換 (v2 のフィールドは v3 でも残す)
+  // Phase 2b 互換
   ownedIds: string[];
   selectedId: string;
   levels: Record<string, number>;
@@ -78,9 +97,12 @@ export interface SaveData {
   gems: number;
   battleStage: number;
   gachaHistory: string[];
-  // Phase 2c-1 で追加
+  // Phase 2c-1
   hero: HeroState;
   jobs: JobsState;
   party: PartyState;
   legacyChars: LegacyCharsState;
+  // Phase 2d
+  skins: SkinsState;
+  rewards: RewardsState;
 }
