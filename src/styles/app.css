@@ -18,10 +18,25 @@ button {
   font-weight: bold;
   background: #2d7cff;
   color: white;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  box-shadow: 0 2px 6px rgba(45, 124, 255, 0.35);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(45, 124, 255, 0.5);
+  background: #4a8dff;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.95);
+  box-shadow: 0 1px 3px rgba(45, 124, 255, 0.3);
 }
 
 button:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .app {
@@ -156,4 +171,129 @@ button:disabled {
 
 .rarity3 {
   box-shadow: 0 0 8px #77d6ff;
+}
+
+.screen {
+  animation: screenFadeIn 0.2s ease both;
+}
+
+@keyframes screenFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.effect3 {
+  animation: rarity3Glow 0.7s ease both;
+}
+
+.effect4 {
+  animation: rarity4Glow 1.0s ease both;
+}
+
+.effect5 {
+  animation: rarity5Glow 2.0s ease both;
+}
+
+@keyframes rarity3Glow {
+  0% {
+    transform: scale(0.7);
+    box-shadow: 0 0 0 #77d6ff;
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05);
+    box-shadow: 0 0 16px #4fb6ff, 0 0 28px #77d6ff;
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px #77d6ff;
+    opacity: 1;
+  }
+}
+
+@keyframes rarity4Glow {
+  0% {
+    transform: scale(0.6);
+    box-shadow: 0 0 0 gold;
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.18);
+    box-shadow: 0 0 24px gold, 0 0 36px #ffd700;
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px gold;
+    opacity: 1;
+  }
+}
+
+@keyframes rarity5Glow {
+  0% {
+    transform: scale(0.5) rotate(-6deg);
+    box-shadow: 0 0 0 white;
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.3) rotate(2deg);
+    box-shadow:
+      0 0 24px #ff5577,
+      0 0 36px #ffaa00,
+      0 0 48px #88ff66,
+      0 0 60px #66ccff;
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.15) rotate(0deg);
+    box-shadow:
+      0 0 28px #ffaa00,
+      0 0 40px #88ff66,
+      0 0 52px #66ccff,
+      0 0 64px #cc66ff;
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 0 16px gold, 0 0 28px #ff77ff;
+    opacity: 1;
+  }
+}
+
+.rainbowBurst {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 200, 100, 0.6) 20%,
+    rgba(255, 100, 200, 0.4) 40%,
+    rgba(100, 200, 255, 0.2) 60%,
+    transparent 80%
+  );
+  animation: rainbowBurst 1.4s ease forwards;
+  z-index: 50;
+}
+
+@keyframes rainbowBurst {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
 }

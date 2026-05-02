@@ -1,4 +1,5 @@
 import { characters } from "../data/characters";
+import { playSE } from "../utils/audio";
 
 interface Props {
   ownedIds: string[];
@@ -6,8 +7,13 @@ interface Props {
 }
 
 export default function CollectionScreen({ ownedIds, back }: Props) {
+  const handleBack = (): void => {
+    playSE("cancel");
+    back();
+  };
+
   return (
-    <div className="card">
+    <div className="card screen">
       <h2>なかま図鑑</h2>
 
       {characters.map((c) => {
@@ -22,7 +28,7 @@ export default function CollectionScreen({ ownedIds, back }: Props) {
         );
       })}
 
-      <button onClick={back}>もどる</button>
+      <button onClick={handleBack}>もどる</button>
     </div>
   );
 }
