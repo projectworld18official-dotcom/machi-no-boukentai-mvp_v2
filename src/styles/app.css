@@ -267,6 +267,43 @@ button:disabled {
   }
 }
 
+.levelUpBanner {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    0 0 8px gold,
+    0 0 18px #ff8800,
+    0 0 28px #ff4400;
+  letter-spacing: 4px;
+  pointer-events: none;
+  z-index: 60;
+  animation: levelUpBanner 1.5s ease forwards;
+}
+
+@keyframes levelUpBanner {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
 .rainbowBurst {
   position: fixed;
   inset: 0;

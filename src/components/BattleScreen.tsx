@@ -34,6 +34,12 @@ export default function BattleScreen({
   const [msg, setMsg] = useState("まものが あらわれた！");
   const [popups, setPopups] = useState<Popup[]>([]);
   const popupId = useRef(0);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+
+  const triggerLevelUp = (): void => {
+    setShowLevelUp(true);
+    setTimeout(() => setShowLevelUp(false), 1500);
+  };
 
   useEffect(() => {
     playBGM("battle");
@@ -83,6 +89,7 @@ export default function BattleScreen({
       win();
       setMsg("しょうり！ ジェム+50");
       playSE("levelup");
+      triggerLevelUp();
       return;
     }
 
@@ -105,6 +112,7 @@ export default function BattleScreen({
       win();
       setMsg("ひっさつ勝利！ ジェム+50");
       playSE("levelup");
+      triggerLevelUp();
       return;
     }
 
@@ -169,6 +177,8 @@ export default function BattleScreen({
       </button>
 
       <button onClick={handleBack}>もどる</button>
+
+      {showLevelUp && <div className="levelUpBanner">LEVEL UP!</div>}
     </div>
   );
 }
