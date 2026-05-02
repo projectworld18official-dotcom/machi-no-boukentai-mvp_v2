@@ -31,6 +31,9 @@ type Screen =
 const DEBUG_KEY = "kakakayoyoyo-debug";
 const DEBUG_FLAG = "debugUnlocked";
 
+// Phase 2d-2: 裏ワザ — 主人公名がこのいずれかなら Lv20 スタート (隠し要素、演出なし)
+const NEWSPAPER_KEYWORDS = ["しんぶん", "新聞", "シンブン"];
+
 const EXP_PER_LEVEL = 100;
 const FIRST_LOGIN_BONUS = 100;
 
@@ -149,6 +152,23 @@ export default function App() {
   };
 
   const handleHeroNameConfirm = (name: string): void => {
+    const isSecret = NEWSPAPER_KEYWORDS.includes(name);
+    if (isSecret) {
+      const stats = heroStats(20);
+      setData({
+        ...data,
+        hero: {
+          ...data.hero,
+          name,
+          nameSet: true,
+          level: 20,
+          exp: 0,
+          hp: stats.maxHp,
+          maxHp: stats.maxHp
+        }
+      });
+      return;
+    }
     setData({
       ...data,
       hero: { ...data.hero, name, nameSet: true }
