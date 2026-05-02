@@ -15,6 +15,15 @@ import {
 import { liveAllies, liveEnemies, sortBySpeed } from "../logic/turnOrder";
 import { tryLumenaris } from "../logic/passive";
 
+// キャラごとのテーマカラー (Phase 2d-3 レベルアップ演出用)
+const MEMBER_COLORS: Record<PartyMemberId, string> = {
+  hero: "#5b8def",
+  warrior: "#7d8fb3",
+  monk: "#fafafa",
+  mage: "#b76dff",
+  youtuber: "#cf3a3a"
+};
+
 export interface BattleResult {
   outcome: "victory" | "defeat";
   expGain: number;
@@ -153,6 +162,8 @@ export default function BattleScreen({
   const popupId = useRef(0);
   const [flashId, setFlashId] = useState<string | null>(null);
   const finishedRef = useRef(false);
+  // レベルアップ派手演出 (Phase 2d-3)
+  const [levelUpEffect, setLevelUpEffect] = useState<{ visible: boolean; color: string; charName: string } | null>(null);
 
   useEffect(() => {
     playBGM("battle");
@@ -191,6 +202,14 @@ export default function BattleScreen({
   const triggerFlash = (actorId: string): void => {
     setFlashId(actorId);
     setTimeout(() => setFlashId((cur) => (cur === actorId ? null : cur)), 280);
+  };
+
+  // レベルアップ演出トリガー: リーダー(hero)のテーマカラーで発火 (Phase 2d-3)
+  const triggerLevelUpEffect = (): void => {
+    const leaderColor = MEMBER_COLORS["hero"];
+    const leaderName = hero.name || "しゅじんこう";
+    setLevelUpEffect({ visible: true, color: leaderColor, charName: leaderName });
+    setTimeout(() => setLevelUpEffect(null), 2000);
   };
 
   // === コマンド選択ハンドラ ===
@@ -426,6 +445,8 @@ export default function BattleScreen({
     if (outcome === "victory") {
       playSE("victory");
       playSE("levelup");
+      // フルスクリーン光線エフェクト発火 (Phase 2d-3)
+      triggerLevelUpEffect();
     } else {
       playSE("damage");
     }
@@ -620,6 +641,16 @@ export default function BattleScreen({
           <div className="stageClearOverlay" />
           <div className="stageClearText" style={{ color: "#ff4444", textShadow: "0 0 8px #800" }}>
             ぜんめつ…
+          </div>
+        </>
+      )}
+
+      {/* レベルアップ派手演出オーバーレイ (Phase 2d-3) */}
+      {levelUpEffect && (
+        <>
+          <div className="levelUpOverlay" />
+          <div className="levelUpText" style={{ color: levelUpEffect.color }}>
+            Lv UP!
           </div>
         </>
       )}

@@ -116,17 +116,21 @@ export const playSE = (type: SEType): void => {
     }
 
     case "levelup": {
+      // Phase 2d-3: 既存アルペジオに和音(D, A, D')を重ね、戦闘BGM D minor と調和させる
       const synth = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "square" },
         envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.3 }
       }).toDestination();
 
       synth.volume.value = -8;
+      // メインアルペジオ (従来)
       synth.triggerAttackRelease("C5", "8n", now);
       synth.triggerAttackRelease("E5", "8n", now + 0.15);
       synth.triggerAttackRelease("G5", "8n", now + 0.3);
       synth.triggerAttackRelease("C6", "4n", now + 0.45);
-      setTimeout(() => synth.dispose(), 1200);
+      // 和音補強: D minor BGM との協和 — D4 + A4 + D5 を同時発音 (完全8度 + 完全5度)
+      synth.triggerAttackRelease(["D4", "A4", "D5"], "4n", now);
+      setTimeout(() => synth.dispose(), 1500);
 
       break;
     }
