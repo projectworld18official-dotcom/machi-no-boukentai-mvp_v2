@@ -147,6 +147,7 @@ export default function BattleScreen({
     skill?: Skill;
   } | null>(null);
   const [pickingAllyTargetFor, setPickingAllyTargetFor] = useState<Skill | null>(null);
+  const [showingSkillsFor, setShowingSkillsFor] = useState<string | null>(null);
   const [logLines, setLogLines] = useState<string[]>(["まものが あらわれた！"]);
   const [popups, setPopups] = useState<PendingPopup[]>([]);
   const popupId = useRef(0);
@@ -211,10 +212,8 @@ export default function BattleScreen({
   };
 
   const handleSkillButton = (): void => {
-    // 何もしない、リスト表示は別途 state 管理
     setShowingSkillsFor(currentAlly.id);
   };
-  const [showingSkillsFor, setShowingSkillsFor] = useState<string | null>(null);
 
   const handlePickSkill = (skill: Skill): void => {
     if (!canUseSkill(currentAlly, skill)) return;
@@ -463,6 +462,17 @@ export default function BattleScreen({
     <div className="card screen battleScreenWide">
       <h2>バトル {stage}</h2>
 
+      {phase === "selecting" && currentAlly && (
+        <div className="battleTurnBanner">
+          {currentAlly.displayName} のターン
+        </div>
+      )}
+      {phase === "executing" && (
+        <div className="battleTurnBanner battleTurnBanner--executing">
+          実行!
+        </div>
+      )}
+
       {/* 敵エリア */}
       <div className="battleEnemiesRow">
         {enemies.map((e) => {
@@ -533,7 +543,7 @@ export default function BattleScreen({
                 ))}
               </div>
               {idx + 1 <= pendingActions.length && (
-                <span className="battleQueuedBadge">入力済</span>
+                <span className="battleQueuedBadge">✓ 決定済</span>
               )}
             </button>
           );

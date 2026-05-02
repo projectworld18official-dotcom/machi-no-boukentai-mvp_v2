@@ -994,6 +994,25 @@ button:disabled {
   text-shadow: 0 0 4px white, 0 0 8px white !important;
 }
 
+.battleTurnBanner {
+  background: #ffd400;
+  color: #222;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  margin: 6px 0;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 8px rgba(255, 212, 0, 0.5);
+}
+
+.battleTurnBanner--executing {
+  background: #ff6b6b;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.6);
+}
+
 /* 主人公命名モーダル (Phase 2c-1) */
 .heroNameOverlay {
   position: fixed;
