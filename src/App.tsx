@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import BattleScreen, { type BattleResult } from "./components/BattleScreen";
 import CharacterPreviewScreen from "./components/CharacterPreviewScreen";
 import CharacterSelectScreen from "./components/CharacterSelectScreen";
+import DebugMenu from "./components/DebugMenu";
 import GachaScreen from "./components/GachaScreen";
 import HeroNameModal from "./components/HeroNameModal";
 import HomeScreen from "./components/HomeScreen";
@@ -24,7 +25,11 @@ type Screen =
   | "gacha"
   | "characterSelect"
   | "characterPreview"
-  | "partySetup";
+  | "partySetup"
+  | "debug";
+
+const DEBUG_KEY = "kakakayoyoyo-debug";
+const DEBUG_FLAG = "debugUnlocked";
 
 const EXP_PER_LEVEL = 100;
 const FIRST_LOGIN_BONUS = 100;
@@ -92,6 +97,18 @@ export default function App() {
   const [previewMemberId, setPreviewMemberId] = useState<PartyMemberId | null>(null);
   const [stageBonus, setStageBonus] = useState<{ stage: number; gems: number } | null>(null);
   const [firstLoginShown, setFirstLoginShown] = useState(false);
+  const [debugUnlocked, setDebugUnlocked] = useState<boolean>(
+    () => localStorage.getItem(DEBUG_FLAG) === "true"
+  );
+
+  // URLパラメータ ?debug=kakakayoyoyo-debug でデバッグメニュー有効化 (司令官専用)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("debug") === DEBUG_KEY) {
+      localStorage.setItem(DEBUG_FLAG, "true");
+      setDebugUnlocked(true);
+    }
+  }, []);
 
   // 初回ログインボーナス処理: nameSet 完了後の初回 home 表示で一度だけ
   useEffect(() => {
@@ -268,6 +285,16 @@ export default function App() {
           jobs={data.jobs}
           party={data.party}
           gems={data.gems}
+          debugUnlocked={debugUnlocked}
+          onDebug={() => setScreen("debug")}
+        />
+      )}
+
+      {!showNameModal && screen === "debug" && (
+        <DebugMenu
+          data={data}
+          setData={setData}
+          onClose={() => setScreen("home")}
         />
       )}
 

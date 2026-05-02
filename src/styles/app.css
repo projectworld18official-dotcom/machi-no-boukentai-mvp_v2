@@ -1085,3 +1085,118 @@ button:disabled {
 .collectionHelp p {
   margin: 2px 0;
 }
+
+/* === Phase 2d-2: Debug Menu (司令官専用、URLパラメータで起動) === */
+.debugButton {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 200;
+  background: #c0392b;
+  color: #ffffff;
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 10px rgba(192, 57, 43, 0.45);
+  cursor: pointer;
+}
+
+.debugButton:hover {
+  background: #e74c3c;
+}
+
+.debugMenuOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 12px;
+  overflow-y: auto;
+  z-index: 300;
+}
+
+.debugMenuBox {
+  width: min(420px, 100%);
+  background: #2c2c2c;
+  color: #ffffff;
+  border: 3px solid #c0392b;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(192, 57, 43, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.debugMenuTitle {
+  margin: 0;
+  font-size: 22px;
+  color: #ff6b5b;
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+.debugMenuWarn {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-align: center;
+  color: #ffcf3a;
+}
+
+.debugMenuItem {
+  width: 100%;
+  background: #4a4a4a;
+  color: #ffffff;
+  border: 1px solid #c0392b;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: left;
+  cursor: pointer;
+}
+
+.debugMenuItem:hover {
+  background: #5d5d5d;
+}
+
+.debugMenuItemDanger {
+  background: #7a1e10;
+  border-color: #ffd700;
+}
+
+.debugMenuItemDanger:hover {
+  background: #a02d1c;
+}
+
+.debugMenuItemBack {
+  background: #555555;
+  border-color: #888888;
+  margin-top: 8px;
+}
+
+.debugMenuStageRow {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.debugMenuStageInput {
+  flex: 0 0 80px;
+  border-radius: 8px;
+  border: 1px solid #c0392b;
+  padding: 8px;
+  font-size: 14px;
+  background: #1d1d1d;
+  color: #ffffff;
+  text-align: center;
+}
+
+.debugMenuStageBtn {
+  flex: 1;
+}

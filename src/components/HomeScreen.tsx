@@ -9,6 +9,8 @@ interface Props {
   jobs: JobsState;
   party: PartyState;
   gems: number;
+  debugUnlocked?: boolean;
+  onDebug?: () => void;
 }
 
 export default function HomeScreen({
@@ -16,7 +18,9 @@ export default function HomeScreen({
   hero,
   jobs,
   party,
-  gems
+  gems,
+  debugUnlocked,
+  onDebug
 }: Props) {
   useEffect(() => {
     playBGM("home");
@@ -38,6 +42,11 @@ export default function HomeScreen({
 
   return (
     <div className="card screen">
+      {debugUnlocked && onDebug && (
+        <button className="debugButton" onClick={onDebug}>
+          🔧 DEBUG
+        </button>
+      )}
       <h1>まちの冒険隊</h1>
       <p>{hero.name ? `${hero.name} と なかまたち` : "まちをまもる仲間を集めよう！"}</p>
       <p className="homeGems">💎 {gems}</p>
