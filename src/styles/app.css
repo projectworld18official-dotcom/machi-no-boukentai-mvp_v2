@@ -543,6 +543,192 @@ button:disabled {
   display: inline-block;
 }
 
+/* === Phase 2c-1 パーティ戦闘画面 === */
+.battleScreenWide {
+  padding: 12px 10px;
+}
+
+.battleEnemiesRow {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: 8px 0 12px;
+}
+
+.battleEnemy {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 110px;
+  background: #fff2f2;
+  border: 2px solid #f5c0c0;
+  border-radius: 12px;
+  padding: 8px 4px;
+  margin-top: 0;
+  color: #333;
+  font-size: 12px;
+  position: relative;
+  cursor: default;
+  box-shadow: none;
+}
+
+.battleEnemy:hover:not(:disabled) {
+  background: #fff2f2;
+  transform: none;
+  box-shadow: none;
+}
+
+.battleEnemy--targetable {
+  border-color: #ffd400;
+  cursor: pointer;
+  animation: targetablePulse 0.8s ease-in-out infinite alternate;
+}
+
+.battleEnemy--targetable:hover:not(:disabled) {
+  background: #fffbe5;
+  transform: scale(1.05);
+}
+
+.battleEnemy--dead {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+
+.battleAlliesRow {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.battleAlly {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 130px;
+  background: #f0f6ff;
+  border: 2px solid #c0d4f5;
+  border-radius: 12px;
+  padding: 8px 4px;
+  margin-top: 0;
+  color: #333;
+  font-size: 12px;
+  position: relative;
+  cursor: default;
+  box-shadow: none;
+}
+
+.battleAlly:hover:not(:disabled) {
+  background: #f0f6ff;
+  transform: none;
+  box-shadow: none;
+}
+
+.battleAlly--active {
+  border-color: #2d7cff;
+  background: #e7f0ff;
+  box-shadow: 0 0 10px rgba(45, 124, 255, 0.4);
+}
+
+.battleAlly--targetable {
+  border-color: #4fd4c6;
+  cursor: pointer;
+  animation: targetablePulse 0.8s ease-in-out infinite alternate;
+}
+
+.battleAlly--targetable:hover:not(:disabled) {
+  background: #e7fff8;
+  transform: scale(1.05);
+}
+
+.battleAlly--dead {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+}
+
+@keyframes targetablePulse {
+  from { box-shadow: 0 0 4px rgba(255, 212, 0, 0.4); }
+  to { box-shadow: 0 0 12px rgba(255, 212, 0, 0.9); }
+}
+
+.battleEmoji {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.battleName {
+  font-size: 12px;
+  margin-top: 2px;
+  font-weight: bold;
+}
+
+.battleHpBar {
+  height: 6px;
+  background: #e0e4eb;
+  border-radius: 3px;
+  margin: 4px 2px 2px;
+  overflow: hidden;
+}
+
+.battleHpFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4fd47f, #4fb6ff);
+  transition: width 0.4s ease;
+}
+
+.battleHpFill--enemy {
+  background: linear-gradient(90deg, #ff7c7c, #ffb24a);
+}
+
+.battleHpText {
+  font-size: 11px;
+  color: #555;
+}
+
+.battleQueuedBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #2d7cff;
+  color: #fff;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.battleLog {
+  background: #fafbff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin: 8px 0;
+  font-size: 12px;
+  min-height: 60px;
+  border: 1px solid #e0e4eb;
+}
+
+.battleLog p {
+  margin: 1px 0;
+  color: #777;
+}
+
+.battleLogLatest {
+  color: #222 !important;
+  font-weight: bold;
+}
+
+.battleCommands {
+  margin: 6px 0;
+}
+
+.battleTurnIndicator {
+  font-size: 13px;
+  font-weight: bold;
+  color: #2d7cff;
+  margin: 4px 0;
+}
+
+.healPopup {
+  color: #4fd47f !important;
+  text-shadow: 0 0 4px white, 0 0 8px white !important;
+}
+
 /* 主人公命名モーダル (Phase 2c-1) */
 .heroNameOverlay {
   position: fixed;

@@ -1,27 +1,23 @@
 import { useEffect } from "react";
-import { getCharacter } from "../data/characters";
+import type { HeroState, JobsState, PartyState } from "../types";
+import { jobsMaster, memberDisplayName, memberEmoji } from "../data/jobs";
 import { playBGM, playSE, stopBGM, unlockAudio } from "../utils/audio";
 
 interface Props {
   onMove: (screen: string) => void;
-  ownedIds: string[];
-  selectedId: string;
-  levels: Record<string, number>;
-  onSelect: (id: string) => void;
+  hero: HeroState;
+  jobs: JobsState;
+  party: PartyState;
 }
 
 export default function HomeScreen({
   onMove,
-  ownedIds,
-  selectedId,
-  levels,
-  onSelect
+  hero,
+  jobs,
+  party
 }: Props) {
-  // 初回マウントは Tone unlock 前なので no-op、戦闘から戻った時に発火する想定。
-  // 初回タップ後の home 滞在は go/pick 内で playBGM を再試行するためカバー。
   useEffect(() => {
     playBGM("home");
-
     return () => {
       stopBGM();
     };
@@ -29,54 +25,65 @@ export default function HomeScreen({
 
   const go = async (screen: string): Promise<void> => {
     await unlockAudio();
-
+    playBGM("home");
     playSE("decision");
     onMove(screen);
   };
 
-  const pick = async (id: string): Promise<void> => {
-    await unlockAudio();
-    // 初回タップ後は unlocked=true なので BGM 起動を再試行 (audio.ts 内 currentBGM ガードで重複起動なし)
-    playBGM("home");
-
-    playSE("decision");
-    onSelect(id);
-  };
-
-  const selected = getCharacter(selectedId);
+  const partyMembers = [party.member1, party.member2, party.member3].filter(
+    (m): m is "hero" | "warrior" | "monk" | "mage" | "youtuber" => m !== null
+  );
 
   return (
     <div className="card screen">
       <h1>まちの冒険隊</h1>
-      <p>まちをまもる仲間を集めよう！</p>
+      <p>{hero.name ? `${hero.name} と なかまたち` : "まちをまもる仲間を集めよう！"}</p>
 
-      <p className="charSelectLabel">
-        なかまをえらぶ <span className="lvInline">{selected.name} Lv.{levels[selectedId] ?? 1}</span>
-      </p>
-
+      <p className="charSelectLabel">いまのパーティ</p>
       <div className="charSelectRow">
-        {ownedIds.map((id) => {
-          const c = getCharacter(id);
-          const lv = levels[id] ?? 1;
-          const active = id === selectedId;
-
+        {partyMembers.map((m) => {
+          const isHero = m === "hero";
+          const lv = isHero ? hero.level : jobs[m].level;
+          const name = memberDisplayName(m, hero.name);
+          const emoji = memberEmoji(m);
           return (
-            <button
-              key={id}
-              type="button"
-              className={`charCard ${active ? "charCard--active" : ""}`}
-              style={{ background: c.color }}
-              onClick={() => pick(id)}
+            <div
+              key={m}
+              className="charCard charCard--active"
+              style={{ background: isHero ? "#ff8fb1" : "#5b8def", cursor: "default" }}
             >
               <span className="lvBadge">Lv.{lv}</span>
-              <div className="charCardEmoji">{c.emoji}</div>
-              <div className="charCardName">{c.name}</div>
-            </button>
+              <div className="charCardEmoji">{emoji}</div>
+              <div className="charCardName">{name}</div>
+            </div>
           );
         })}
       </div>
 
-      <button onClick={() => go("battle")}>⚔️ バトル</button>
+      <p className="charSelectLabel">なかまいちらん</p>
+      <div className="charSelectRow">
+        {(["warrior", "monk", "mage", "youtuber"] as const).map((id) => {
+          const j = jobsMaster[id];
+          const lv = jobs[id].level;
+          const inParty = partyMembers.includes(id);
+          return (
+            <div
+              key={id}
+              className={`charCard ${inParty ? "charCard--active" : ""}`}
+              style={{ background: "#5b8def", cursor: "default" }}
+            >
+              <span className="lvBadge">Lv.{lv}</span>
+              <div className="charCardEmoji">{j.emoji}</div>
+              <div className="charCardName">{j.displayName}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button onClick={() => go("partySetup")}>👥 パーティ編成</button>
+      <button onClick={() => go("battle")} disabled={partyMembers.length < 2}>
+        ⚔️ バトル
+      </button>
       <button onClick={() => go("gacha")}>🎁 ガチャ</button>
       <button onClick={() => go("collection")}>📚 なかま</button>
     </div>

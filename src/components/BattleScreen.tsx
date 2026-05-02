@@ -1,270 +1,616 @@
-import { useEffect, useRef, useState } from "react";
-import { getCharacter } from "../data/characters";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { JobsState, MageState, PartyMemberId, PartyState, HeroState } from "../types";
+import { heroStats, jobStats, memberDisplayName, memberEmoji } from "../data/jobs";
+import type { Skill } from "../data/skills";
+import { unlockedSkills } from "../data/skills";
 import { playBGM, playSE, stopBGM } from "../utils/audio";
-import Sprite from "./sprites/Sprite";
+import type { ActorState, QueuedAction } from "../logic/battleTypes";
+import {
+  applyDefend,
+  applySkill,
+  canUseSkill,
+  consumeSkillCost,
+  performBasicAttack
+} from "../logic/skillEffects";
+import { liveAllies, liveEnemies, sortBySpeed } from "../logic/turnOrder";
+import { tryLumenaris } from "../logic/passive";
+
+export interface BattleResult {
+  outcome: "victory" | "defeat";
+  expGain: number;
+  allyFinal: Array<{
+    memberId: PartyMemberId;
+    hp: number;
+    maxHp: number;
+    mp?: number;
+    maxMp?: number;
+  }>;
+}
 
 interface Props {
-  selectedId: string;
-  level: number;
+  hero: HeroState;
+  jobs: JobsState;
+  party: PartyState;
   stage: number;
-  win: () => void;
+  onFinish: (result: BattleResult) => void;
   back: () => void;
 }
 
-interface Popup {
-  id: number;
-  value: number;
-  critical: boolean;
-  side: "hero" | "enemy";
-}
-
-const CRIT_RATE = 0.2;
-const CRIT_MULT = 1.5;
-const TAP_LOCK_MS = 800;
 const STAGE_CLEAR_MS = 700;
 
+interface PendingPopup {
+  id: number;
+  actorId: string;
+  value: number;
+  kind: "damage" | "heal" | "miss" | "crit";
+}
+
+const buildAllyActor = (
+  memberId: PartyMemberId,
+  hero: HeroState,
+  jobs: JobsState
+): ActorState => {
+  if (memberId === "hero") {
+    const s = heroStats(hero.level);
+    return {
+      id: "ally_hero",
+      side: "ally",
+      memberId,
+      displayName: hero.name || "しゅじんこう",
+      emoji: memberEmoji(memberId),
+      level: hero.level,
+      hp: hero.hp,
+      maxHp: s.maxHp,
+      attack: s.attack,
+      defense: s.defense,
+      speed: s.speed
+    };
+  }
+
+  const j = jobs[memberId];
+  const s = jobStats(memberId, j.level);
+  const isMage = memberId === "mage";
+  return {
+    id: `ally_${memberId}`,
+    side: "ally",
+    memberId,
+    displayName: memberDisplayName(memberId, hero.name),
+    emoji: memberEmoji(memberId),
+    level: j.level,
+    hp: j.hp,
+    maxHp: s.maxHp,
+    mp: isMage ? (j as MageState).mp : undefined,
+    maxMp: isMage ? s.maxMp : undefined,
+    attack: s.attack,
+    defense: s.defense,
+    speed: s.speed
+  };
+};
+
+const buildEnemies = (stage: number): ActorState[] => {
+  // ステージ 1: 1体, 4: 2体, 7: 3体 (大体3ステージごとに増える、上限3)
+  const count = Math.min(3, 1 + Math.floor((stage - 1) / 3));
+  const enemies: ActorState[] = [];
+  for (let i = 0; i < count; i++) {
+    const baseHp = 60 + stage * 18 + i * 8;
+    const baseAtk = 8 + stage * 2;
+    enemies.push({
+      id: `enemy_${i}`,
+      side: "enemy",
+      displayName: `まもの${count > 1 ? i + 1 : ""}`,
+      emoji: "👾",
+      level: stage,
+      hp: baseHp,
+      maxHp: baseHp,
+      attack: baseAtk,
+      defense: 4 + Math.floor(stage / 2),
+      speed: 6 + Math.floor(stage / 4)
+    });
+  }
+  return enemies;
+};
+
+type Phase =
+  | "selecting"        // プレイヤーがコマンド入力中
+  | "executing"        // 速度順実行中
+  | "stageClear"       // ステージクリア演出
+  | "defeated";        // 全滅
+
 export default function BattleScreen({
-  selectedId,
-  level,
+  hero,
+  jobs,
+  party,
   stage,
-  win,
+  onFinish,
   back
 }: Props) {
-  const hero = getCharacter(selectedId);
-  const enemyMax = 80 + stage * 25;
+  // パーティメンバー (null は除外)
+  const partyIds = useMemo<PartyMemberId[]>(() => {
+    const arr: PartyMemberId[] = ["hero"];
+    if (party.member2) arr.push(party.member2);
+    if (party.member3) arr.push(party.member3);
+    return arr;
+  }, [party]);
 
-  const [heroHp, setHeroHp] = useState(hero.hp);
-  const [enemyHp, setEnemyHp] = useState(enemyMax);
-  const [flash, setFlash] = useState(false);
-  const [msg, setMsg] = useState("まものが あらわれた！");
-  const [popups, setPopups] = useState<Popup[]>([]);
+  // === 戦闘 actors (state) ===
+  const [actors, setActors] = useState<ActorState[]>(() => {
+    const allies = partyIds.map((id) => buildAllyActor(id, hero, jobs));
+    const enemies = buildEnemies(stage);
+    return [...allies, ...enemies];
+  });
+
+  const [phase, setPhase] = useState<Phase>("selecting");
+  const [activeAllyIdx, setActiveAllyIdx] = useState(0);
+  const [pendingActions, setPendingActions] = useState<QueuedAction[]>([]);
+  const [pickingTargetFor, setPickingTargetFor] = useState<{
+    type: "attack" | "skill";
+    skill?: Skill;
+  } | null>(null);
+  const [pickingAllyTargetFor, setPickingAllyTargetFor] = useState<Skill | null>(null);
+  const [logLines, setLogLines] = useState<string[]>(["まものが あらわれた！"]);
+  const [popups, setPopups] = useState<PendingPopup[]>([]);
   const popupId = useRef(0);
-  const [showLevelUp, setShowLevelUp] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
-  const [heroState, setHeroState] = useState<"idle" | "attack">("idle");
-  const lastTapRef = useRef(0);
-  const clearTimerRef = useRef<number | null>(null);
+  const [flashId, setFlashId] = useState<string | null>(null);
   const finishedRef = useRef(false);
-  const attackTimerRef = useRef<number | null>(null);
-
-  const triggerAttackPose = (): void => {
-    if (attackTimerRef.current !== null) {
-      clearTimeout(attackTimerRef.current);
-    }
-    setHeroState("attack");
-    attackTimerRef.current = window.setTimeout(() => {
-      setHeroState("idle");
-    }, 280);
-  };
-
-  const triggerLevelUp = (): void => {
-    setShowLevelUp(true);
-    setTimeout(() => setShowLevelUp(false), 1500);
-  };
 
   useEffect(() => {
     playBGM("battle");
-
     return () => {
       stopBGM();
-
-      if (clearTimerRef.current !== null) {
-        clearTimeout(clearTimerRef.current);
-      }
-      if (attackTimerRef.current !== null) {
-        clearTimeout(attackTimerRef.current);
-      }
     };
   }, []);
 
-  const addPopup = (value: number, critical: boolean, side: "hero" | "enemy"): void => {
-    const id = popupId.current++;
+  const allies = actors.filter((a) => a.side === "ally");
+  const enemies = actors.filter((a) => a.side === "enemy");
+  const liveAlly = liveAllies(actors);
+  const liveEnemy = liveEnemies(actors);
 
-    setPopups((arr) => [...arr, { id, value, critical, side }]);
+  // 現在コマンド選択中の味方
+  const currentAlly = liveAlly[activeAllyIdx];
 
-    setTimeout(() => {
-      setPopups((arr) => arr.filter((p) => p.id !== id));
-    }, 900);
+  const pushLog = (lines: string[]): void => {
+    setLogLines((prev) => [...lines, ...prev].slice(0, 6));
   };
 
-  const rollCritical = (base: number): { dmg: number; critical: boolean } => {
-    const critical = Math.random() < CRIT_RATE;
-    const dmg = critical ? Math.floor(base * CRIT_MULT) : base;
-
-    return { dmg, critical };
+  const spawnPopups = (
+    raw: Array<{ actorId: string; value: number; kind: "damage" | "heal" | "miss" | "crit" }>
+  ): void => {
+    const items: PendingPopup[] = raw.map((p) => ({
+      id: popupId.current++,
+      ...p
+    }));
+    setPopups((prev) => [...prev, ...items]);
+    items.forEach((item) => {
+      setTimeout(() => {
+        setPopups((prev) => prev.filter((p) => p.id !== item.id));
+      }, 900);
+    });
   };
 
-  const enemyAttack = (): void => {
-    if (isClearing) return;
-
-    const base = 8 + stage * 2;
-    const { dmg, critical } = rollCritical(base);
-
-    setHeroHp((v) => Math.max(0, v - dmg));
-    setMsg(`てきのこうげき ${dmg} ダメージ${critical ? "！会心" : ""}`);
-    addPopup(dmg, critical, "hero");
-    playSE("damage");
+  const triggerFlash = (actorId: string): void => {
+    setFlashId(actorId);
+    setTimeout(() => setFlashId((cur) => (cur === actorId ? null : cur)), 280);
   };
 
-  // 連打抑制: 直近のタップから TAP_LOCK_MS 経過していない場合は無視。
-  const guardTap = (): boolean => {
-    const now = Date.now();
-    if (now - lastTapRef.current < TAP_LOCK_MS) return false;
-    lastTapRef.current = now;
-    return true;
+  // === コマンド選択ハンドラ ===
+  const handleAttackButton = (): void => {
+    if (liveEnemy.length === 1) {
+      enqueueAttack(liveEnemy[0]);
+    } else {
+      setPickingTargetFor({ type: "attack" });
+    }
   };
 
-  const finishStageClear = (): void => {
+  const enqueueAttack = (target: ActorState): void => {
+    const action: QueuedAction = {
+      actor: currentAlly,
+      type: "attack",
+      targets: [target]
+    };
+    advanceAfterEnqueue(action);
+  };
+
+  const handleSkillButton = (): void => {
+    // 何もしない、リスト表示は別途 state 管理
+    setShowingSkillsFor(currentAlly.id);
+  };
+  const [showingSkillsFor, setShowingSkillsFor] = useState<string | null>(null);
+
+  const handlePickSkill = (skill: Skill): void => {
+    if (!canUseSkill(currentAlly, skill)) return;
+    setShowingSkillsFor(null);
+
+    if (skill.target === "self") {
+      enqueueSkill(skill, [currentAlly]);
+    } else if (skill.target === "enemyAll") {
+      enqueueSkill(skill, liveEnemy);
+    } else if (skill.target === "allyAll") {
+      enqueueSkill(skill, liveAlly);
+    } else if (skill.target === "enemySingle") {
+      if (liveEnemy.length === 1) {
+        enqueueSkill(skill, [liveEnemy[0]]);
+      } else {
+        setPickingTargetFor({ type: "skill", skill });
+      }
+    } else if (skill.target === "allySingle") {
+      // 蘇生は戦闘不能を、回復は生存を選ぶ
+      setPickingAllyTargetFor(skill);
+    }
+  };
+
+  const enqueueSkill = (skill: Skill, targets: ActorState[]): void => {
+    const action: QueuedAction = {
+      actor: currentAlly,
+      type: "skill",
+      skill,
+      targets
+    };
+    advanceAfterEnqueue(action);
+  };
+
+  const handleDefendButton = (): void => {
+    advanceAfterEnqueue({ actor: currentAlly, type: "defend", targets: [currentAlly] });
+  };
+
+  const advanceAfterEnqueue = (action: QueuedAction): void => {
+    setPendingActions((prev) => {
+      const next = [...prev, action];
+      const remaining = liveAlly.length - next.length;
+      if (remaining > 0) {
+        setActiveAllyIdx(next.length);
+      } else {
+        // 全員入力完了 → 実行へ
+        setActiveAllyIdx(0);
+        setPickingTargetFor(null);
+        setPickingAllyTargetFor(null);
+        setShowingSkillsFor(null);
+        setTimeout(() => executeTurn(next), 100);
+      }
+      return next;
+    });
+  };
+
+  const handlePickEnemyTarget = (target: ActorState): void => {
+    if (!pickingTargetFor) return;
+    if (pickingTargetFor.type === "attack") {
+      enqueueAttack(target);
+    } else if (pickingTargetFor.type === "skill" && pickingTargetFor.skill) {
+      enqueueSkill(pickingTargetFor.skill, [target]);
+    }
+  };
+
+  const handlePickAllyTarget = (target: ActorState): void => {
+    if (!pickingAllyTargetFor) return;
+    const skill = pickingAllyTargetFor;
+    // 蘇生は戦闘不能のみ、回復は生存のみ
+    if (skill.effect.reviveHpPercent && target.hp > 0) return;
+    if (!skill.effect.reviveHpPercent && target.hp <= 0) return;
+    enqueueSkill(skill, [target]);
+  };
+
+  // === ターン実行 ===
+  const executeTurn = (actions: QueuedAction[]): void => {
+    setPhase("executing");
+
+    // 敵のアクションを生成 (生存している敵がランダムに生存している味方を殴る)
+    const enemyActions: QueuedAction[] = liveEnemy.map((enemy) => ({
+      actor: enemy,
+      type: "attack",
+      targets: [pickRandomLiveAlly()]
+    }));
+
+    const ordered = sortBySpeed([...actions, ...enemyActions]);
+
+    runActionsSerial(ordered, 0);
+  };
+
+  const pickRandomLiveAlly = (): ActorState => {
+    const alive = actors.filter((a) => a.side === "ally" && a.hp > 0);
+    return alive[Math.floor(Math.random() * alive.length)];
+  };
+
+  const runActionsSerial = (queue: QueuedAction[], idx: number): void => {
+    if (idx >= queue.length) {
+      finishTurn();
+      return;
+    }
+
+    const action = queue[idx];
+    // 行動者がすでに戦闘不能ならスキップ
+    if (action.actor.hp <= 0) {
+      runActionsSerial(queue, idx + 1);
+      return;
+    }
+    // 麻痺
+    if (action.actor.paralyzed) {
+      pushLog([`${action.actor.displayName} はまひしてうごけない！`]);
+      action.actor.paralyzed = false;
+      setTimeout(() => runActionsSerial(queue, idx + 1), 500);
+      return;
+    }
+
+    // ターゲットを生存者に絞り直す (途中で倒れた可能性)
+    const validTargets = action.targets.filter((t) => {
+      if (action.skill?.effect.reviveHpPercent) return t.hp === 0;
+      return t.hp > 0 || t === action.actor;
+    });
+
+    let result;
+    if (action.type === "attack") {
+      const target = validTargets[0] ?? (action.actor.side === "ally" ? liveEnemy[0] : liveAlly[0]);
+      if (!target) {
+        runActionsSerial(queue, idx + 1);
+        return;
+      }
+      result = performBasicAttack(action.actor, target);
+      playSE(action.actor.side === "ally" ? "attack" : "damage");
+      triggerFlash(target.id);
+    } else if (action.type === "defend") {
+      result = applyDefend(action.actor);
+    } else if (action.type === "skill" && action.skill) {
+      // コスト消費
+      const ok = consumeSkillCost(action.actor, action.skill);
+      if (!ok) {
+        pushLog([`${action.actor.displayName} はちからつき…`]);
+        runActionsSerial(queue, idx + 1);
+        return;
+      }
+      const allAllies = actors.filter((a) => a.side === "ally");
+      result = applySkill(action.actor, action.skill, validTargets, allAllies);
+      playSE("attack");
+      validTargets.forEach((t) => triggerFlash(t.id));
+    } else {
+      result = { log: [], popups: [] };
+    }
+
+    pushLog(result.log);
+    spawnPopups(result.popups);
+
+    // 状態を再描画
+    setActors([...actors]);
+
+    // 勝敗判定
+    if (liveEnemies(actors).length === 0) {
+      setTimeout(() => endStage("victory"), 600);
+      return;
+    }
+    if (liveAllies(actors).length === 0) {
+      setTimeout(() => endStage("defeat"), 600);
+      return;
+    }
+
+    setTimeout(() => runActionsSerial(queue, idx + 1), 450);
+  };
+
+  const finishTurn = (): void => {
+    // バフ・状態の経過処理
+    actors.forEach((a) => {
+      if (a.attackBuff) {
+        a.attackBuff.turnsRemaining -= 1;
+        if (a.attackBuff.turnsRemaining <= 0) a.attackBuff = undefined;
+      }
+      a.defenseBuffPct = undefined;
+    });
+
+    // 主人公パッシブ「ルメナリス」
+    const heroActor = actors.find((a) => a.memberId === "hero" && a.side === "ally") ?? null;
+    const liveAllyArr = actors.filter((a) => a.side === "ally" && a.hp > 0);
+    const passive = tryLumenaris(heroActor, liveAllyArr);
+    if (passive.triggered) {
+      pushLog(passive.log);
+      spawnPopups(passive.popups);
+      playSE("levelup");
+    }
+
+    setActors([...actors]);
+
+    if (liveEnemies(actors).length === 0) {
+      endStage("victory");
+      return;
+    }
+    if (liveAllies(actors).length === 0) {
+      endStage("defeat");
+      return;
+    }
+
+    // 次ターンへ
+    setPendingActions([]);
+    setActiveAllyIdx(0);
+    setPhase("selecting");
+  };
+
+  const endStage = (outcome: "victory" | "defeat"): void => {
     if (finishedRef.current) return;
     finishedRef.current = true;
+    setPhase(outcome === "victory" ? "stageClear" : "defeated");
 
-    if (clearTimerRef.current !== null) {
-      clearTimeout(clearTimerRef.current);
-      clearTimerRef.current = null;
+    if (outcome === "victory") {
+      playSE("victory");
+      playSE("levelup");
+    } else {
+      playSE("damage");
     }
 
-    win();
-  };
+    // 経験値配分: 敵総EXP = enemies の合計 (level*15)
+    const enemiesAll = actors.filter((a) => a.side === "enemy");
+    const totalExp = enemiesAll.reduce((s, e) => s + e.level * 15, 0);
+    const partyCount = allies.length;
+    const expGain = outcome === "victory" ? Math.floor(totalExp / partyCount) : 0;
 
-  const startStageClear = (): void => {
-    if (isClearing) return;
+    const allyFinal: BattleResult["allyFinal"] = allies.map((a) => ({
+      memberId: a.memberId!,
+      hp: a.hp,
+      maxHp: a.maxHp,
+      mp: a.mp,
+      maxMp: a.maxMp
+    }));
 
-    setIsClearing(true);
-    playSE("victory");
-    playSE("levelup");
-    triggerLevelUp();
-
-    clearTimerRef.current = window.setTimeout(() => {
-      finishStageClear();
-    }, STAGE_CLEAR_MS);
-  };
-
-  const normal = (): void => {
-    if (isClearing) return;
-    if (!guardTap()) return;
-
-    const { dmg, critical } = rollCritical(hero.attack);
-    const next = enemyHp - dmg;
-
-    triggerAttackPose();
-    setEnemyHp(Math.max(0, next));
-    setMsg(`${hero.name} のこうげき ${dmg} ダメージ${critical ? "！会心" : ""}`);
-    addPopup(dmg, critical, "enemy");
-    playSE("attack");
-
-    if (next <= 0) {
-      setMsg("ステージクリア！ ジェム+50");
-      startStageClear();
-      return;
-    }
-
-    setTimeout(() => enemyAttack(), 350);
-  };
-
-  const skill = (): void => {
-    if (isClearing) return;
-    if (!guardTap()) return;
-
-    triggerAttackPose();
-    const { dmg, critical } = rollCritical(hero.skillPower);
-    const next = enemyHp - dmg;
-
-    setFlash(true);
-    setTimeout(() => setFlash(false), 700);
-
-    setEnemyHp(Math.max(0, next));
-    setMsg(`${hero.skillName}！！ ${dmg} ダメージ${critical ? "！会心" : ""}`);
-    addPopup(dmg, critical, "enemy");
-    playSE("attack");
-
-    if (next <= 0) {
-      setMsg("ひっさつ勝利！ ジェム+50");
-      startStageClear();
-      return;
-    }
-
-    setTimeout(() => enemyAttack(), 350);
+    setTimeout(() => {
+      onFinish({ outcome, expGain, allyFinal });
+    }, outcome === "victory" ? STAGE_CLEAR_MS + 300 : 1200);
   };
 
   const handleBack = (): void => {
-    if (isClearing) return;
+    if (phase === "executing" || phase === "stageClear") return;
     playSE("cancel");
     back();
   };
 
+  // === 描画 ===
+  const inputDisabled = phase !== "selecting" || !currentAlly;
+
   return (
-    <div className="card screen">
+    <div className="card screen battleScreenWide">
       <h2>バトル {stage}</h2>
 
-      <div className={`arena ${flash ? "flash" : ""}`}>
-        <div className="fighter">
-          <div className="big spriteHost">
-            <Sprite character={hero} state={heroState} />
-          </div>
-          <div>
-            {hero.name} <span className="lvInline">Lv.{level}</span>
-          </div>
-          <div>HP {heroHp}</div>
-          <div className="popupLayer">
-            {popups
-              .filter((p) => p.side === "hero")
-              .map((p) => (
-                <span
-                  key={p.id}
-                  className={`damagePopup ${p.critical ? "critical" : ""}`}
-                >
-                  {p.value}
-                </span>
-              ))}
-          </div>
-        </div>
-
-        <div className="fighter enemy">
-          <div className="big">👾</div>
-          <div>まもの</div>
-          <div>HP {enemyHp}</div>
-          <div className="popupLayer">
-            {popups
-              .filter((p) => p.side === "enemy")
-              .map((p) => (
-                <span
-                  key={p.id}
-                  className={`damagePopup ${p.critical ? "critical" : ""}`}
-                >
-                  {p.value}
-                </span>
-              ))}
-          </div>
-        </div>
+      {/* 敵エリア */}
+      <div className="battleEnemiesRow">
+        {enemies.map((e) => {
+          const dead = e.hp <= 0;
+          const targeting = pickingTargetFor && !dead;
+          return (
+            <button
+              key={e.id}
+              type="button"
+              className={`battleEnemy ${dead ? "battleEnemy--dead" : ""} ${flashId === e.id ? "flash" : ""} ${targeting ? "battleEnemy--targetable" : ""}`}
+              onClick={() => targeting && handlePickEnemyTarget(e)}
+              disabled={!targeting}
+            >
+              <div className="battleEmoji">{e.emoji}</div>
+              <div className="battleName">{e.displayName}</div>
+              <div className="battleHpBar">
+                <div
+                  className="battleHpFill battleHpFill--enemy"
+                  style={{ width: `${(e.hp / e.maxHp) * 100}%` }}
+                />
+              </div>
+              <div className="battleHpText">{e.hp}/{e.maxHp}</div>
+              <div className="popupLayer">
+                {popups.filter((p) => p.actorId === e.id).map((p) => (
+                  <span key={p.id} className={`damagePopup ${p.kind === "crit" ? "critical" : ""}`}>
+                    {p.value}
+                  </span>
+                ))}
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      <p>{msg}</p>
+      {/* 味方エリア */}
+      <div className="battleAlliesRow">
+        {allies.map((a, idx) => {
+          const dead = a.hp <= 0;
+          const isCurrent = phase === "selecting" && currentAlly && a.id === currentAlly.id;
+          const allyTargeting = pickingAllyTargetFor && (
+            (pickingAllyTargetFor.effect.reviveHpPercent && dead) ||
+            (!pickingAllyTargetFor.effect.reviveHpPercent && !dead)
+          );
+          return (
+            <button
+              key={a.id}
+              type="button"
+              className={`battleAlly ${dead ? "battleAlly--dead" : ""} ${isCurrent ? "battleAlly--active" : ""} ${flashId === a.id ? "flash" : ""} ${allyTargeting ? "battleAlly--targetable" : ""}`}
+              onClick={() => allyTargeting && handlePickAllyTarget(a)}
+              disabled={!allyTargeting}
+            >
+              <div className="battleEmoji">{a.emoji}</div>
+              <div className="battleName">
+                {a.displayName} <span className="lvInline">Lv.{a.level}</span>
+              </div>
+              <div className="battleHpBar">
+                <div className="battleHpFill" style={{ width: `${(a.hp / a.maxHp) * 100}%` }} />
+              </div>
+              <div className="battleHpText">{a.hp}/{a.maxHp}{typeof a.mp === "number" ? ` MP${a.mp}/${a.maxMp}` : ""}</div>
+              <div className="popupLayer">
+                {popups.filter((p) => p.actorId === a.id).map((p) => (
+                  <span
+                    key={p.id}
+                    className={`damagePopup ${p.kind === "heal" ? "healPopup" : ""} ${p.kind === "crit" ? "critical" : ""}`}
+                  >
+                    {p.kind === "heal" ? `+${p.value}` : p.value}
+                  </span>
+                ))}
+              </div>
+              {idx + 1 <= pendingActions.length && (
+                <span className="battleQueuedBadge">入力済</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-      <button onClick={normal} disabled={heroHp <= 0 || enemyHp <= 0 || isClearing}>
-        こうげき
-      </button>
+      {/* ログ */}
+      <div className="battleLog">
+        {logLines.slice(0, 3).map((l, i) => (
+          <p key={i} className={i === 0 ? "battleLogLatest" : ""}>{l}</p>
+        ))}
+      </div>
 
-      <button onClick={skill} disabled={heroHp <= 0 || enemyHp <= 0 || isClearing}>
-        必殺技
-      </button>
+      {/* コマンド入力 */}
+      {phase === "selecting" && currentAlly && !showingSkillsFor && !pickingTargetFor && !pickingAllyTargetFor && (
+        <div className="battleCommands">
+          <p className="battleTurnIndicator">
+            {currentAlly.displayName} のコマンドをえらんでください
+          </p>
+          <button onClick={handleAttackButton} disabled={inputDisabled}>たたかう</button>
+          <button onClick={handleSkillButton} disabled={inputDisabled || unlockedSkills(currentAlly.memberId!, currentAlly.level).length === 0}>ひっさつ</button>
+          <button onClick={handleDefendButton} disabled={inputDisabled}>ぼうぎょ</button>
+        </div>
+      )}
 
-      <button onClick={handleBack} disabled={isClearing}>
-        もどる
-      </button>
+      {/* 必殺技リスト */}
+      {showingSkillsFor && currentAlly && (
+        <div className="battleCommands">
+          <p>{currentAlly.displayName} のひっさつ</p>
+          {unlockedSkills(currentAlly.memberId!, currentAlly.level).map((s) => {
+            const usable = canUseSkill(currentAlly, s);
+            const cost = s.costType === "hpPercent"
+              ? `HP-${Math.floor(currentAlly.maxHp * s.costValue / 100)}`
+              : `MP${s.costValue}`;
+            return (
+              <button
+                key={s.id}
+                onClick={() => handlePickSkill(s)}
+                disabled={!usable}
+                title={s.description}
+              >
+                {s.name} <small>({cost})</small>
+              </button>
+            );
+          })}
+          <button onClick={() => setShowingSkillsFor(null)}>もどる</button>
+        </div>
+      )}
 
-      {showLevelUp && <div className="levelUpBanner">LEVEL UP!</div>}
+      {/* ターゲット選択中の案内 */}
+      {pickingTargetFor && (
+        <div className="battleCommands">
+          <p>てきをえらんでください</p>
+          <button onClick={() => setPickingTargetFor(null)}>キャンセル</button>
+        </div>
+      )}
+      {pickingAllyTargetFor && (
+        <div className="battleCommands">
+          <p>{pickingAllyTargetFor.effect.reviveHpPercent ? "そせいするなかまをえらんでね" : "なかまをえらんでください"}</p>
+          <button onClick={() => setPickingAllyTargetFor(null)}>キャンセル</button>
+        </div>
+      )}
 
-      {isClearing && (
+      <button onClick={handleBack} disabled={phase === "executing" || phase === "stageClear"}>もどる</button>
+
+      {phase === "stageClear" && (
         <>
           <div className="stageClearOverlay" />
           <div className="stageClearText">ステージクリア！</div>
-          <button
-            type="button"
-            className="stageClearSkip"
-            onClick={finishStageClear}
-          >
-            スキップ ▶
-          </button>
+        </>
+      )}
+      {phase === "defeated" && (
+        <>
+          <div className="stageClearOverlay" />
+          <div className="stageClearText" style={{ color: "#ff4444", textShadow: "0 0 8px #800" }}>
+            ぜんめつ…
+          </div>
         </>
       )}
     </div>
