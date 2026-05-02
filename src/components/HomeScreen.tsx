@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { getCharacter } from "../data/characters";
-import { playSE, unlockAudio } from "../utils/audio";
+import { playBGM, playSE, stopBGM, unlockAudio } from "../utils/audio";
 
 interface Props {
   onMove: (screen: string) => void;
@@ -16,6 +17,16 @@ export default function HomeScreen({
   levels,
   onSelect
 }: Props) {
+  // 初回マウントは Tone unlock 前なので no-op、戦闘から戻った時に発火する想定。
+  // 初回タップ後の home 滞在は go/pick 内で playBGM を再試行するためカバー。
+  useEffect(() => {
+    playBGM("home");
+
+    return () => {
+      stopBGM();
+    };
+  }, []);
+
   const go = async (screen: string): Promise<void> => {
     await unlockAudio();
 
@@ -25,6 +36,7 @@ export default function HomeScreen({
 
   const pick = async (id: string): Promise<void> => {
     await unlockAudio();
+    playBGM("home");
 
     playSE("decision");
     onSelect(id);

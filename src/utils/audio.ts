@@ -13,10 +13,14 @@ export type BGMType = "home" | "battle";
 
 let unlocked = false;
 let currentBGM: BGMType | null = null;
-let bgmHandles: { part: Tone.Part | null; synth: Tone.PolySynth | null } = {
-  part: null,
-  synth: null
-};
+
+interface BgmHandles {
+  parts: Tone.Part[];
+  synths: Array<Tone.PolySynth | Tone.Synth>;
+  effects: Tone.ToneAudioNode[];
+}
+
+let bgmHandles: BgmHandles = { parts: [], synths: [], effects: [] };
 
 export const unlockAudio = async (): Promise<void> => {
   if (unlocked) return;
@@ -145,42 +149,39 @@ export const playSE = (type: SEType): void => {
   }
 };
 
+// 哀愁系 BGM: Eb minor pentatonic = Eb / Gb / Ab / Bb / Db (ピアノ黒鍵 5 音相当)
+// ベースライン仕様: Eb - B - Db 反復 (司令官指示準拠、Tone.js では Eb 表記で安全側統一)
+
 const homeMelody: Array<[string, string]> = [
-  ["0:0", "C5"],
-  ["0:1", "E5"],
-  ["0:2", "G5"],
-  ["0:3", "E5"],
-  ["1:0", "F5"],
-  ["1:1", "A5"],
-  ["1:2", "G5"],
-  ["1:3", "E5"],
-  ["2:0", "D5"],
-  ["2:1", "F5"],
-  ["2:2", "A5"],
-  ["2:3", "F5"],
-  ["3:0", "C5"],
-  ["3:1", "E5"],
-  ["3:2", "G5"],
-  ["3:3", "C5"]
+  ["0:0", "Eb5"],
+  ["0:2", "Gb5"],
+  ["1:0", "Bb4"],
+  ["1:2", "Ab4"],
+  ["2:0", "Db5"],
+  ["2:2", "Eb5"],
+  ["3:0", "Bb4"],
+  ["3:2", "Eb4"]
+];
+
+const homeBassLine: Array<[string, string]> = [
+  ["0:0", "Eb3"],
+  ["1:0", "B2"],
+  ["2:0", "Db3"],
+  ["3:0", "Eb3"]
 ];
 
 const battleMelody: Array<[string, string]> = [
-  ["0:0", "A3"],
-  ["0:1", "A3"],
-  ["0:2", "C4"],
-  ["0:3", "E4"],
-  ["1:0", "G3"],
-  ["1:1", "G3"],
-  ["1:2", "B3"],
-  ["1:3", "D4"],
-  ["2:0", "F3"],
-  ["2:1", "F3"],
-  ["2:2", "A3"],
-  ["2:3", "C4"],
-  ["3:0", "E3"],
-  ["3:1", "G3"],
-  ["3:2", "A3"],
-  ["3:3", "B3"]
+  ["0:0", "Eb4"], ["0:1", "Gb4"], ["0:2", "Bb4"], ["0:3", "Ab4"],
+  ["1:0", "Eb5"], ["1:1", "Db5"], ["1:2", "Bb4"], ["1:3", "Gb4"],
+  ["2:0", "Eb4"], ["2:1", "Bb4"], ["2:2", "Db5"], ["2:3", "Eb5"],
+  ["3:0", "Bb4"], ["3:1", "Ab4"], ["3:2", "Gb4"], ["3:3", "Eb4"]
+];
+
+const battleBassLine: Array<[string, string]> = [
+  ["0:0", "Eb2"], ["0:2", "Eb2"],
+  ["1:0", "B1"],  ["1:2", "B1"],
+  ["2:0", "Db2"], ["2:2", "Db2"],
+  ["3:0", "Eb2"], ["3:2", "Bb2"]
 ];
 
 export const playBGM = (type: BGMType): void => {
@@ -189,43 +190,70 @@ export const playBGM = (type: BGMType): void => {
 
   stopBGM();
 
-  const synth = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: type === "home" ? "triangle" : "sawtooth" },
-    envelope: { attack: 0.02, decay: 0.2, sustain: 0.3, release: 0.2 }
-  }).toDestination();
+  // エフェクトチェーン: メロディ/ベース → Lowpass フィルター → Freeverb (薄め) → Destination
+  const reverb = new Tone.Freeverb(0.7, 3000).toDestination();
+  reverb.wet.value = 0.25;
 
-  synth.volume.value = type === "home" ? -18 : -16;
+  const filter = new Tone.Filter({
+    frequency: type === "home" ? 1800 : 2300,
+    type: "lowpass",
+    rolloff: -12
+  }).connect(reverb);
 
-  const score = type === "home" ? homeMelody : battleMelody;
+  const melodySynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: "triangle" },
+    envelope: { attack: 0.04, decay: 0.3, sustain: 0.4, release: 0.6 }
+  }).connect(filter);
+  melodySynth.volume.value = type === "home" ? -20 : -17;
 
-  const part = new Tone.Part((time, note: string) => {
-    synth.triggerAttackRelease(note, "8n", time);
-  }, score.map(([t, n]) => [t, n]));
+  const bassSynth = new Tone.Synth({
+    oscillator: { type: "sine" },
+    envelope: { attack: 0.06, decay: 0.4, sustain: 0.6, release: 0.8 }
+  }).connect(filter);
+  bassSynth.volume.value = type === "home" ? -22 : -19;
 
-  part.loop = true;
-  part.loopEnd = "4m";
+  const melody = type === "home" ? homeMelody : battleMelody;
+  const bass = type === "home" ? homeBassLine : battleBassLine;
+  const noteLen = type === "home" ? "2n" : "8n";
 
-  Tone.getTransport().bpm.value = type === "home" ? 110 : 144;
-  part.start(0);
+  const melodyPart = new Tone.Part((time, note: string) => {
+    melodySynth.triggerAttackRelease(note, noteLen, time);
+  }, melody.map(([t, n]) => [t, n]));
+
+  const bassPart = new Tone.Part((time, note: string) => {
+    bassSynth.triggerAttackRelease(note, "2n", time);
+  }, bass.map(([t, n]) => [t, n]));
+
+  melodyPart.loop = true;
+  melodyPart.loopEnd = "4m";
+  bassPart.loop = true;
+  bassPart.loopEnd = "4m";
+
+  // BPM: home=74 (穏やかな哀愁、長音中心) / battle=86 (やや動きある哀愁)
+  Tone.getTransport().bpm.value = type === "home" ? 74 : 86;
+  melodyPart.start(0);
+  bassPart.start(0);
   Tone.getTransport().start();
 
-  bgmHandles = { part, synth };
+  bgmHandles = {
+    parts: [melodyPart, bassPart],
+    synths: [melodySynth, bassSynth],
+    effects: [filter, reverb]
+  };
   currentBGM = type;
 };
 
 export const stopBGM = (): void => {
-  if (bgmHandles.part) {
-    bgmHandles.part.stop();
-    bgmHandles.part.dispose();
-  }
-
-  if (bgmHandles.synth) {
-    bgmHandles.synth.dispose();
-  }
+  bgmHandles.parts.forEach((p) => {
+    p.stop();
+    p.dispose();
+  });
+  bgmHandles.synths.forEach((s) => s.dispose());
+  bgmHandles.effects.forEach((e) => e.dispose());
 
   Tone.getTransport().stop();
   Tone.getTransport().cancel();
 
-  bgmHandles = { part: null, synth: null };
+  bgmHandles = { parts: [], synths: [], effects: [] };
   currentBGM = null;
 };
