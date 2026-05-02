@@ -50,8 +50,9 @@ export default function HomeScreen({
             <div
               key={m}
               className="charCard charCard--active"
-              style={{ background: isHero ? "#ff8fb1" : "#5b8def", cursor: "default" }}
+              style={{ background: "#5b8def", cursor: "default" }}
             >
+              {isHero && <span className="heroTag">主人公</span>}
               <span className="lvBadge">Lv.{lv}</span>
               <div className="charCardEmoji">{emoji}</div>
               <div className="charCardName">{name}</div>

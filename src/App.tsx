@@ -200,6 +200,7 @@ export default function App() {
           party={data.party}
           heroName={data.hero.name}
           onChange={handlePartyChange}
+          onConfirm={() => setScreen("home")}
           back={() => setScreen("home")}
         />
       )}

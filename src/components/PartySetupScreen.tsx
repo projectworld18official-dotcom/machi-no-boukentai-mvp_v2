@@ -7,15 +7,27 @@ interface Props {
   party: PartyState;
   heroName: string;
   onChange: (party: PartyState) => void;
+  onConfirm: () => void;
   back: () => void;
 }
 
 const JOB_IDS: JobId[] = ["warrior", "monk", "mage", "youtuber"];
 
-export default function PartySetupScreen({ jobs, party, heroName, onChange, back }: Props) {
+const SLOT_LABELS: Record<"member2" | "member3", string> = {
+  member2: "ふたりめ",
+  member3: "みつめ"
+};
+
+export default function PartySetupScreen({
+  jobs,
+  party,
+  heroName,
+  onChange,
+  onConfirm,
+  back
+}: Props) {
   const setSlot = (slot: "member2" | "member3", id: JobId | null): void => {
     playSE("decision");
-    // 重複防止: もう一方の slot と同じなら入れ替え
     const otherSlot = slot === "member2" ? "member3" : "member2";
     const next: PartyState = { ...party, [slot]: id };
     if (id !== null && next[otherSlot] === id) {
@@ -29,12 +41,19 @@ export default function PartySetupScreen({ jobs, party, heroName, onChange, back
     back();
   };
 
+  const handleConfirm = (): void => {
+    playSE("decision");
+    onConfirm();
+  };
+
+  const canConfirm = party.member2 !== null;
+
   const renderSlot = (slot: "member2" | "member3") => {
     const current = party[slot];
     return (
       <div className="partySlot">
-        <p className="partySlotLabel">{slot === "member2" ? "2人目" : "3人目"}</p>
-        <div className="partySlotRow">
+        <p className="partySlotLabel">{SLOT_LABELS[slot]}</p>
+        <div className="partySlotRow charSelectRow">
           {JOB_IDS.map((id) => {
             const j = jobsMaster[id];
             const lv = jobs[id].level;
@@ -67,7 +86,7 @@ export default function PartySetupScreen({ jobs, party, heroName, onChange, back
       <p>主人公 <strong>{heroName || "しゅじんこう"}</strong> + 2人で出発するよ</p>
 
       <div className="partyHeroSlot">
-        <span className="lvBadge" style={{ position: "static", marginRight: 6 }}>主人公</span>
+        <span className="heroTag" style={{ position: "static", marginRight: 6 }}>主人公</span>
         <span style={{ fontSize: 26 }}>🦸</span>
         <span style={{ marginLeft: 8 }}>{heroName || "しゅじんこう"}</span>
       </div>
@@ -75,7 +94,16 @@ export default function PartySetupScreen({ jobs, party, heroName, onChange, back
       {renderSlot("member2")}
       {renderSlot("member3")}
 
-      <button onClick={handleBack}>もどる</button>
+      <button
+        onClick={handleConfirm}
+        disabled={!canConfirm}
+        className="partyConfirmButton"
+      >
+        ✅ けってい
+      </button>
+      <button onClick={handleBack} className="partyBackButton">
+        もどる
+      </button>
     </div>
   );
 }

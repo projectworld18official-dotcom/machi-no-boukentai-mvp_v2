@@ -543,6 +543,73 @@ button:disabled {
   display: inline-block;
 }
 
+/* === Phase 2d 共通追加 === */
+.heroTag {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: #ff8fb1;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  z-index: 3;
+}
+
+.partySlot {
+  margin-top: 8px;
+}
+
+.partySlotLabel {
+  margin: 4px 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: #444;
+}
+
+.partyHeroSlot {
+  background: #f0f6ff;
+  border: 2px solid #5b8def;
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.partyConfirmButton {
+  background: #ffd400;
+  color: #222;
+  font-size: 18px;
+  box-shadow: 0 4px 10px rgba(255, 212, 0, 0.5);
+  margin-top: 14px;
+}
+
+.partyConfirmButton:hover:not(:disabled) {
+  background: #ffea4d;
+}
+
+.partyConfirmButton:disabled {
+  background: #ddd;
+  color: #999;
+  box-shadow: none;
+}
+
+.partyBackButton {
+  background: #888;
+  font-size: 14px;
+  padding: 10px;
+  margin-top: 8px;
+}
+
+.partyBackButton:hover:not(:disabled) {
+  background: #aaa;
+}
+
 /* === Phase 2c-1 パーティ戦闘画面 === */
 .battleScreenWide {
   padding: 12px 10px;
