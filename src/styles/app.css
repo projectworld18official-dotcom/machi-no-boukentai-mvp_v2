@@ -58,6 +58,51 @@ button:disabled {
   background: #f6f8ff;
   border-radius: 14px;
   padding: 10px;
+  position: relative;
+}
+
+.popupLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.damagePopup {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, 0);
+  font-weight: 900;
+  font-size: 22px;
+  color: #ff3b3b;
+  text-shadow: 0 0 4px white, 0 0 8px white;
+  animation: damagePop 0.9s ease-out forwards;
+}
+
+.damagePopup.critical {
+  font-size: 34px;
+  color: #ffd400;
+  text-shadow: 0 0 6px #b35900, 0 0 12px #ff8800;
+}
+
+@keyframes damagePop {
+  0% {
+    transform: translate(-50%, 0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -8px) scale(1.15);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(-50%, -32px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -56px) scale(0.9);
+    opacity: 0;
+  }
 }
 
 .enemy {
