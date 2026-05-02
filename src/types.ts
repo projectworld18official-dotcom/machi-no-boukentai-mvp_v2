@@ -13,7 +13,10 @@ export interface Character {
 }
 
 export interface SaveData {
+  version: number;
   ownedIds: string[];
+  selectedId: string;
+  levels: Record<string, number>;
   gems: number;
   battleStage: number;
   gachaHistory: string[];

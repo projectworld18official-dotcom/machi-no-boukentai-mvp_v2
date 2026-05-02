@@ -16,13 +16,18 @@ export default function App() {
     if (data.gems < cost) return;
 
     const owned = new Set(data.ownedIds);
+    const levels = { ...data.levels };
 
-    ids.forEach((id) => owned.add(id));
+    ids.forEach((id) => {
+      owned.add(id);
+      if (typeof levels[id] !== "number") levels[id] = 1;
+    });
 
     setData({
       ...data,
       gems: data.gems - cost,
       ownedIds: [...owned],
+      levels,
       gachaHistory: [...ids, ...data.gachaHistory].slice(0, 30)
     });
 
@@ -33,18 +38,36 @@ export default function App() {
     setData({
       ...data,
       gems: data.gems + 50,
-      battleStage: data.battleStage + 1
+      battleStage: data.battleStage + 1,
+      levels: {
+        ...data.levels,
+        [data.selectedId]: (data.levels[data.selectedId] ?? 1) + 1
+      }
     });
+  };
+
+  const selectCharacter = (id: string): void => {
+    if (!data.ownedIds.includes(id)) return;
+    setData({ ...data, selectedId: id });
   };
 
   return (
     <div className="app">
-      {screen === "home" && <HomeScreen onMove={(s) => setScreen(s as Screen)} />}
+      {screen === "home" && (
+        <HomeScreen
+          onMove={(s) => setScreen(s as Screen)}
+          ownedIds={data.ownedIds}
+          selectedId={data.selectedId}
+          levels={data.levels}
+          onSelect={selectCharacter}
+        />
+      )}
 
       {screen === "battle" && (
         <BattleScreen
           key={data.battleStage}
-          ownedIds={data.ownedIds}
+          selectedId={data.selectedId}
+          level={data.levels[data.selectedId] ?? 1}
           stage={data.battleStage}
           win={win}
           back={() => setScreen("home")}

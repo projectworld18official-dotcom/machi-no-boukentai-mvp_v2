@@ -3,7 +3,8 @@ import { getCharacter } from "../data/characters";
 import { playBGM, playSE, stopBGM } from "../utils/audio";
 
 interface Props {
-  ownedIds: string[];
+  selectedId: string;
+  level: number;
   stage: number;
   win: () => void;
   back: () => void;
@@ -20,12 +21,13 @@ const CRIT_RATE = 0.2;
 const CRIT_MULT = 1.5;
 
 export default function BattleScreen({
-  ownedIds,
+  selectedId,
+  level,
   stage,
   win,
   back
 }: Props) {
-  const hero = getCharacter(ownedIds[0]);
+  const hero = getCharacter(selectedId);
   const enemyMax = 80 + stage * 25;
 
   const [heroHp, setHeroHp] = useState(hero.hp);
@@ -131,7 +133,9 @@ export default function BattleScreen({
       <div className={`arena ${flash ? "flash" : ""}`}>
         <div className="fighter">
           <div className="big">{hero.emoji}</div>
-          <div>{hero.name}</div>
+          <div>
+            {hero.name} <span className="lvInline">Lv.{level}</span>
+          </div>
           <div>HP {heroHp}</div>
           <div className="popupLayer">
             {popups
