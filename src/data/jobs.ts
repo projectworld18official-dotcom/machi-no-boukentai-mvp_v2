@@ -22,6 +22,9 @@ export interface JobMaster {
   // 魔法使いのみ MP
   baseMp?: number;
   growthMp?: number;
+  // Phase 2d: スキン関連
+  defaultBodySkinId: string;     // デフォルト body スキン id
+  spriteImageUrl: string | null; // Phase 2e で AI 画像 URL を登録予定 (現状 null)
 }
 
 export const jobsMaster: Record<JobId, JobMaster> = {
@@ -39,7 +42,9 @@ export const jobsMaster: Record<JobId, JobMaster> = {
     growthHp: 10,
     growthAttack: 3,
     growthDefense: 1,
-    growthSpeed: 1
+    growthSpeed: 1,
+    defaultBodySkinId: "warrior_body_normal",
+    spriteImageUrl: null
   },
   monk: {
     id: "monk",
@@ -55,7 +60,9 @@ export const jobsMaster: Record<JobId, JobMaster> = {
     growthHp: 12,
     growthAttack: 2,
     growthDefense: 2,
-    growthSpeed: 1
+    growthSpeed: 1,
+    defaultBodySkinId: "monk_body_white",
+    spriteImageUrl: null
   },
   mage: {
     id: "mage",
@@ -73,7 +80,9 @@ export const jobsMaster: Record<JobId, JobMaster> = {
     growthDefense: 0,
     growthSpeed: 1,
     baseMp: 30,
-    growthMp: 3
+    growthMp: 3,
+    defaultBodySkinId: "mage_body_normal",
+    spriteImageUrl: null
   },
   youtuber: {
     id: "youtuber",
@@ -89,7 +98,9 @@ export const jobsMaster: Record<JobId, JobMaster> = {
     growthHp: 6,
     growthAttack: 1,
     growthDefense: 1,
-    growthSpeed: 2
+    growthSpeed: 2,
+    defaultBodySkinId: "youtuber_body_normal",
+    spriteImageUrl: null
   }
 };
 
@@ -106,7 +117,9 @@ export const heroMaster = {
   growthHp: 8,
   growthAttack: 2,
   growthDefense: 1,
-  growthSpeed: 1
+  growthSpeed: 1,
+  defaultBodySkinId: "hero_body_normal",
+  spriteImageUrl: null as string | null
 };
 
 export const computeStats = (
