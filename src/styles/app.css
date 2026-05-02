@@ -543,6 +543,63 @@ button:disabled {
   display: inline-block;
 }
 
+/* 主人公命名モーダル (Phase 2c-1) */
+.heroNameOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.heroNameBox {
+  background: white;
+  border-radius: 18px;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+
+.heroNameBox h2 {
+  margin-bottom: 8px;
+}
+
+.heroNameHelp {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 14px;
+}
+
+.heroNameInput {
+  width: 100%;
+  border: 2px solid #2d7cff;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 22px;
+  font-weight: bold;
+  text-align: center;
+  letter-spacing: 6px;
+  margin-bottom: 8px;
+  background: #f6f9ff;
+}
+
+.heroNameInput:focus {
+  outline: none;
+  border-color: #ffd400;
+  background: #fff;
+}
+
+.heroNameError {
+  color: #d24545;
+  font-size: 13px;
+  margin: 4px 0 8px;
+}
+
 /* 図鑑ヘルプブロック (Phase 2b) */
 .collectionHelp {
   background: #f4f9ff;
