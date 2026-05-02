@@ -541,3 +541,19 @@ button:disabled {
 .emojiSpriteGlyph {
   display: inline-block;
 }
+
+/* 図鑑ヘルプブロック (Phase 2b) */
+.collectionHelp {
+  background: #f4f9ff;
+  border-left: 4px solid #2d7cff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #444;
+}
+
+.collectionHelp p {
+  margin: 2px 0;
+}

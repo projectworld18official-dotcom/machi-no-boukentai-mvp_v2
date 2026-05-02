@@ -16,6 +16,12 @@ export default function CollectionScreen({ ownedIds, back }: Props) {
     <div className="card screen">
       <h2>なかま図鑑</h2>
 
+      <div className="collectionHelp">
+        <p>ガチャでなかまをふやそう！</p>
+        <p>あつめたなかまは、ずかんにとうろくされるよ。</p>
+        <p>★3 / ★4 / ★5 でレアリティがちがうよ。</p>
+      </div>
+
       {characters.map((c) => {
         const owned = ownedIds.includes(c.id);
 
