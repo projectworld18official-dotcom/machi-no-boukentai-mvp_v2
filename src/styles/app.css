@@ -88,6 +88,7 @@ button:disabled {
   inset: 0;
   pointer-events: none;
   overflow: visible;
+  z-index: 2;
 }
 
 .damagePopup {

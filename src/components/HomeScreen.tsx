@@ -36,6 +36,7 @@ export default function HomeScreen({
 
   const pick = async (id: string): Promise<void> => {
     await unlockAudio();
+    // 初回タップ後は unlocked=true なので BGM 起動を再試行 (audio.ts 内 currentBGM ガードで重複起動なし)
     playBGM("home");
 
     playSE("decision");
