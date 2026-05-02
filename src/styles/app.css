@@ -2,10 +2,16 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: sans-serif;
   background: linear-gradient(#8ed6ff, #eaf8ff);
+  min-height: 100dvh;
 }
 
 button {
@@ -21,6 +27,7 @@ button {
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
   box-shadow: 0 2px 6px rgba(45, 124, 255, 0.35);
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 button:hover:not(:disabled) {
@@ -417,4 +424,65 @@ button:disabled {
   border-radius: 6px;
   margin-left: 4px;
   vertical-align: middle;
+}
+
+/* ステージクリア演出 (Phase 2b) */
+.stageClearOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 70;
+  pointer-events: auto;
+  animation: stageClearFade 0.7s ease-in-out forwards;
+}
+
+@keyframes stageClearFade {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.stageClearText {
+  position: fixed;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 4px;
+  text-shadow: 0 0 8px #4a8dff, 0 0 18px #2d7cff;
+  pointer-events: none;
+  z-index: 72;
+  animation: stageClearText 0.7s ease forwards;
+}
+
+@keyframes stageClearText {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  30% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+.stageClearSkip {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: auto;
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2d7cff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 75;
+  pointer-events: auto;
+}
+
+.stageClearSkip:hover:not(:disabled) {
+  background: #fff;
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }

@@ -19,6 +19,8 @@ interface Popup {
 
 const CRIT_RATE = 0.2;
 const CRIT_MULT = 1.5;
+const TAP_LOCK_MS = 800;
+const STAGE_CLEAR_MS = 700;
 
 export default function BattleScreen({
   selectedId,
@@ -37,6 +39,10 @@ export default function BattleScreen({
   const [popups, setPopups] = useState<Popup[]>([]);
   const popupId = useRef(0);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const lastTapRef = useRef(0);
+  const clearTimerRef = useRef<number | null>(null);
+  const finishedRef = useRef(false);
 
   const triggerLevelUp = (): void => {
     setShowLevelUp(true);
@@ -48,6 +54,10 @@ export default function BattleScreen({
 
     return () => {
       stopBGM();
+
+      if (clearTimerRef.current !== null) {
+        clearTimeout(clearTimerRef.current);
+      }
     };
   }, []);
 
@@ -69,6 +79,8 @@ export default function BattleScreen({
   };
 
   const enemyAttack = (): void => {
+    if (isClearing) return;
+
     const base = 8 + stage * 2;
     const { dmg, critical } = rollCritical(base);
 
@@ -78,7 +90,43 @@ export default function BattleScreen({
     playSE("damage");
   };
 
+  // 連打抑制: 直近のタップから TAP_LOCK_MS 経過していない場合は無視。
+  const guardTap = (): boolean => {
+    const now = Date.now();
+    if (now - lastTapRef.current < TAP_LOCK_MS) return false;
+    lastTapRef.current = now;
+    return true;
+  };
+
+  const finishStageClear = (): void => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+
+    if (clearTimerRef.current !== null) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+
+    win();
+  };
+
+  const startStageClear = (): void => {
+    if (isClearing) return;
+
+    setIsClearing(true);
+    playSE("victory");
+    playSE("levelup");
+    triggerLevelUp();
+
+    clearTimerRef.current = window.setTimeout(() => {
+      finishStageClear();
+    }, STAGE_CLEAR_MS);
+  };
+
   const normal = (): void => {
+    if (isClearing) return;
+    if (!guardTap()) return;
+
     const { dmg, critical } = rollCritical(hero.attack);
     const next = enemyHp - dmg;
 
@@ -88,10 +136,8 @@ export default function BattleScreen({
     playSE("attack");
 
     if (next <= 0) {
-      win();
-      setMsg("しょうり！ ジェム+50");
-      playSE("levelup");
-      triggerLevelUp();
+      setMsg("ステージクリア！ ジェム+50");
+      startStageClear();
       return;
     }
 
@@ -99,6 +145,9 @@ export default function BattleScreen({
   };
 
   const skill = (): void => {
+    if (isClearing) return;
+    if (!guardTap()) return;
+
     const { dmg, critical } = rollCritical(hero.skillPower);
     const next = enemyHp - dmg;
 
@@ -111,10 +160,8 @@ export default function BattleScreen({
     playSE("attack");
 
     if (next <= 0) {
-      win();
       setMsg("ひっさつ勝利！ ジェム+50");
-      playSE("levelup");
-      triggerLevelUp();
+      startStageClear();
       return;
     }
 
@@ -122,6 +169,7 @@ export default function BattleScreen({
   };
 
   const handleBack = (): void => {
+    if (isClearing) return;
     playSE("cancel");
     back();
   };
@@ -172,17 +220,33 @@ export default function BattleScreen({
 
       <p>{msg}</p>
 
-      <button onClick={normal} disabled={heroHp <= 0 || enemyHp <= 0}>
+      <button onClick={normal} disabled={heroHp <= 0 || enemyHp <= 0 || isClearing}>
         こうげき
       </button>
 
-      <button onClick={skill} disabled={heroHp <= 0 || enemyHp <= 0}>
+      <button onClick={skill} disabled={heroHp <= 0 || enemyHp <= 0 || isClearing}>
         必殺技
       </button>
 
-      <button onClick={handleBack}>もどる</button>
+      <button onClick={handleBack} disabled={isClearing}>
+        もどる
+      </button>
 
       {showLevelUp && <div className="levelUpBanner">LEVEL UP!</div>}
+
+      {isClearing && (
+        <>
+          <div className="stageClearOverlay" />
+          <div className="stageClearText">ステージクリア！</div>
+          <button
+            type="button"
+            className="stageClearSkip"
+            onClick={finishStageClear}
+          >
+            スキップ ▶
+          </button>
+        </>
+      )}
     </div>
   );
 }

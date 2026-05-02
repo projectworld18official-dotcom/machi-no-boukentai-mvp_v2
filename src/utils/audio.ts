@@ -6,7 +6,8 @@ export type SEType =
   | "decision"
   | "cancel"
   | "gacha"
-  | "levelup";
+  | "levelup"
+  | "victory";
 
 export type BGMType = "home" | "battle";
 
@@ -122,6 +123,22 @@ export const playSE = (type: SEType): void => {
       synth.triggerAttackRelease("G5", "8n", now + 0.3);
       synth.triggerAttackRelease("C6", "4n", now + 0.45);
       setTimeout(() => synth.dispose(), 1200);
+
+      break;
+    }
+
+    case "victory": {
+      // ステージクリア用ファンファーレ。既存 6SE と整合する Triangle 系合成音。
+      const synth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "triangle" },
+        envelope: { attack: 0.005, decay: 0.18, sustain: 0.25, release: 0.35 }
+      }).toDestination();
+
+      synth.volume.value = -10;
+      synth.triggerAttackRelease("Eb5", "16n", now);
+      synth.triggerAttackRelease("Bb5", "16n", now + 0.1);
+      synth.triggerAttackRelease("Eb6", "8n", now + 0.22);
+      setTimeout(() => synth.dispose(), 800);
 
       break;
     }
