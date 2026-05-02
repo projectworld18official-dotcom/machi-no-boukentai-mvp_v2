@@ -1201,3 +1201,41 @@ button:disabled {
 .debugMenuStageBtn {
   flex: 1;
 }
+
+/* テキスト選択・コピー無効化 (Phase 2d-3) */
+button,
+.card,
+.battleScreenWide,
+.homeGems,
+.charSelectRow,
+.charCard,
+.skinCard,
+.previewHero,
+.previewTabs,
+.skinGrid,
+.gachaHelp,
+.skinHint,
+.heroNameOverlay,
+.debugMenuOverlay,
+.debugMenuBox,
+.stageClearOverlay,
+.resultBox,
+.battleLog,
+.battleTurnBanner,
+.battleEnemiesRow,
+.battleAlliesRow,
+.battleCommands,
+h1, h2, h3, p, label, span {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
