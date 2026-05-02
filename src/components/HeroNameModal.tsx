@@ -5,13 +5,17 @@ interface Props {
   onConfirm: (name: string) => void;
 }
 
-const KATAKANA_1_TO_4 = /^[ァ-ヶー]{1,4}$/;
+// Phase 2d-2: 文字種制限撤廃 (1-4文字、Unicode 対応)
+const isValidHeroName = (s: string): boolean => {
+  const len = [...s].length; // サロゲートペア対応
+  return len >= 1 && len <= 4;
+};
 
 export default function HeroNameModal({ onConfirm }: Props) {
   const [value, setValue] = useState("");
   const [touched, setTouched] = useState(false);
 
-  const valid = KATAKANA_1_TO_4.test(value);
+  const valid = isValidHeroName(value);
   const showError = touched && !valid && value.length > 0;
 
   const submit = async (): Promise<void> => {
@@ -26,7 +30,7 @@ export default function HeroNameModal({ onConfirm }: Props) {
     <div className="heroNameOverlay">
       <div className="heroNameBox">
         <h2>しゅじんこうのなまえ</h2>
-        <p className="heroNameHelp">カタカナ1〜4もじでなまえをつけてね</p>
+        <p className="heroNameHelp">1〜4もじでなまえをつけてね</p>
         <input
           className="heroNameInput"
           type="text"
@@ -39,7 +43,7 @@ export default function HeroNameModal({ onConfirm }: Props) {
           inputMode="text"
         />
         {showError && (
-          <p className="heroNameError">カタカナ1〜4もじでなまえをつけてね</p>
+          <p className="heroNameError">1〜4もじでなまえをつけてね</p>
         )}
         <button onClick={submit} disabled={!valid}>
           けってい
