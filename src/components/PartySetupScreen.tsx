@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { JobId, JobsState, PartyState } from "../types";
 import { jobsMaster } from "../data/jobs";
 import { playSE } from "../utils/audio";
@@ -26,6 +27,11 @@ export default function PartySetupScreen({
   onConfirm,
   back
 }: Props) {
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const handleImgError = (id: string): void => {
+    setImgErrors((prev) => ({ ...prev, [id]: true }));
+  };
+
   const setSlot = (slot: "member2" | "member3", id: JobId | null): void => {
     playSE("decision");
     const otherSlot = slot === "member2" ? "member3" : "member2";
@@ -70,7 +76,16 @@ export default function PartySetupScreen({
                 disabled={usedByOther && !active}
               >
                 <span className="lvBadge">Lv.{lv}</span>
-                <div className="charCardEmoji">{j.emoji}</div>
+                {j.spriteImageUrl && !imgErrors[id] ? (
+                  <img
+                    src={j.spriteImageUrl}
+                    alt={j.displayName}
+                    className="charCardSprite"
+                    onError={() => handleImgError(id)}
+                  />
+                ) : (
+                  <div className="charCardEmoji">{j.emoji}</div>
+                )}
                 <div className="charCardName">{j.displayName}</div>
               </button>
             );

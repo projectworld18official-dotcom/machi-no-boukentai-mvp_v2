@@ -44,7 +44,7 @@ export const jobsMaster: Record<JobId, JobMaster> = {
     growthDefense: 1,
     growthSpeed: 1,
     defaultBodySkinId: "warrior_body_normal",
-    spriteImageUrl: null
+    spriteImageUrl: "/characters/warrior_you.png"
   },
   monk: {
     id: "monk",
@@ -62,7 +62,7 @@ export const jobsMaster: Record<JobId, JobMaster> = {
     growthDefense: 2,
     growthSpeed: 1,
     defaultBodySkinId: "monk_body_white",
-    spriteImageUrl: null
+    spriteImageUrl: "/characters/monk_daichi.png"
   },
   mage: {
     id: "mage",
@@ -82,7 +82,7 @@ export const jobsMaster: Record<JobId, JobMaster> = {
     baseMp: 30,
     growthMp: 3,
     defaultBodySkinId: "mage_body_normal",
-    spriteImageUrl: null
+    spriteImageUrl: "/characters/mage_nayu.png"
   },
   youtuber: {
     id: "youtuber",
@@ -100,7 +100,7 @@ export const jobsMaster: Record<JobId, JobMaster> = {
     growthDefense: 1,
     growthSpeed: 2,
     defaultBodySkinId: "youtuber_body_normal",
-    spriteImageUrl: null
+    spriteImageUrl: "/characters/youtuber.png"
   }
 };
 
@@ -119,7 +119,12 @@ export const heroMaster = {
   growthDefense: 1,
   growthSpeed: 1,
   defaultBodySkinId: "hero_body_normal",
-  spriteImageUrl: null as string | null
+  spriteImageUrl: "/characters/hero.png" as string | null
+};
+
+export const memberSpriteUrl = (id: PartyMemberId): string | null => {
+  if (id === "hero") return heroMaster.spriteImageUrl;
+  return jobsMaster[id].spriteImageUrl;
 };
 
 export const computeStats = (

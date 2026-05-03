@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { JobsState, MageState, PartyMemberId, PartyState, HeroState } from "../types";
-import { heroStats, jobStats, memberDisplayName, memberEmoji } from "../data/jobs";
+import { heroStats, jobStats, memberDisplayName, memberEmoji, memberSpriteUrl } from "../data/jobs";
 import type { Skill } from "../data/skills";
 import { unlockedSkills } from "../data/skills";
 import { playBGM, playSE, stopBGM } from "../utils/audio";
@@ -14,6 +14,16 @@ import {
 } from "../logic/skillEffects";
 import { liveAllies, liveEnemies, sortBySpeed } from "../logic/turnOrder";
 import { tryLumenaris } from "../logic/passive";
+
+// ステージ番号 → バトル背景画像パス (6ステージ循環)
+const STAGE_BG_URLS: Record<number, string> = {
+  1: "/battle_backgrounds/stage1.png",
+  2: "/battle_backgrounds/stage2.png",
+  3: "/battle_backgrounds/stage3.png",
+  4: "/battle_backgrounds/stage4.png",
+  5: "/battle_backgrounds/stage5.png",
+  6: "/battle_backgrounds/stage6.png"
+};
 
 // キャラごとのテーマカラー (Phase 2d-3 レベルアップ演出用)
 const MEMBER_COLORS: Record<PartyMemberId, string> = {
@@ -166,6 +176,10 @@ export default function BattleScreen({
   const [battleResult, setBattleResult] = useState<BattleResult | null>(null);
   // レベルアップ派手演出 (Phase 2d-3)
   const [levelUpEffect, setLevelUpEffect] = useState<{ visible: boolean; color: string; charName: string } | null>(null);
+  const [allyImgErrors, setAllyImgErrors] = useState<Record<string, boolean>>({});
+  const handleAllyImgError = (actorId: string): void => {
+    setAllyImgErrors((prev) => ({ ...prev, [actorId]: true }));
+  };
 
   useEffect(() => {
     playBGM("battle");
@@ -488,8 +502,13 @@ export default function BattleScreen({
   // === 描画 ===
   const inputDisabled = phase !== "selecting" || !currentAlly;
 
+  const stageBgUrl = STAGE_BG_URLS[((stage - 1) % 6) + 1];
+
   return (
-    <div className="card screen battleScreenWide">
+    <div
+      className="card screen battleScreenWide"
+      style={stageBgUrl ? { backgroundImage: `url(${stageBgUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+    >
       <h2>バトル {stage}</h2>
 
       {phase === "selecting" && currentAlly && (
@@ -554,7 +573,16 @@ export default function BattleScreen({
               onClick={() => allyTargeting && handlePickAllyTarget(a)}
               disabled={!allyTargeting}
             >
-              <div className="battleEmoji">{a.emoji}</div>
+              {a.memberId && memberSpriteUrl(a.memberId) && !allyImgErrors[a.id] ? (
+                <img
+                  src={memberSpriteUrl(a.memberId)!}
+                  alt={a.displayName}
+                  className="battleAllySprite"
+                  onError={() => handleAllyImgError(a.id)}
+                />
+              ) : (
+                <div className="battleEmoji">{a.emoji}</div>
+              )}
               <div className="battleName">
                 {a.displayName} <span className="lvInline">Lv.{a.level}</span>
               </div>

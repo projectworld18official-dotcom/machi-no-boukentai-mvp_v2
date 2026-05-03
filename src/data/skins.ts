@@ -57,6 +57,8 @@ const buildSkinsFor = (charId: PartyMemberId, opts: {
   rare2Color: string;
   special1: { id: string; name: string; effectColor: string; description: string };
   special2: { id: string; name: string; effectColor: string; description: string };
+  goldImageUrl?: string | null;
+  rare2ImageUrl?: string | null;
 }): Skin[] => {
   const isMonk = charId === "monk";
   const r3Colors = isMonk ? r3SetMonk : r3Set;
@@ -91,7 +93,7 @@ const buildSkinsFor = (charId: PartyMemberId, opts: {
       description: "きらきらゴールドのレアふく",
       bodyColor: COLORS.gold,
       borderColor: "#ffd700",
-      imageUrl: null
+      imageUrl: opts.goldImageUrl ?? null
     },
     {
       id: `${charId}_body_rare2`,
@@ -102,7 +104,7 @@ const buildSkinsFor = (charId: PartyMemberId, opts: {
       description: `とくべつな${opts.rare2Name}のふく`,
       bodyColor: opts.rare2Color,
       borderColor: "#ff77ff",
-      imageUrl: null
+      imageUrl: opts.rare2ImageUrl ?? null
     },
     {
       id: opts.special1.id,
@@ -133,6 +135,8 @@ export const skins: Skin[] = [
     goldName: "ゴールド",
     rare2Name: "レインボー",
     rare2Color: COLORS.rainbow,
+    goldImageUrl: "/skins/hero_gold.png",
+    rare2ImageUrl: "/skins/hero_rainbow.png",
     special1: { id: "hero_special_blueflame", name: "ヴォルガ・蒼炎", effectColor: "#3aa1ff", description: "ヴォルガが青いほのおになる" },
     special2: { id: "hero_special_redflame", name: "ヴォルガ・紅蓮", effectColor: "#ff3a3a", description: "ヴォルガが真っ赤になる" }
   }),
@@ -140,6 +144,8 @@ export const skins: Skin[] = [
     goldName: "ゴールド",
     rare2Name: "銀月",
     rare2Color: "#c0c0c0",
+    goldImageUrl: "/skins/warrior_you_gold.png",
+    rare2ImageUrl: "/skins/warrior_you_rainbow.png",
     special1: { id: "warrior_special_ice", name: "斬撃・氷", effectColor: "#7ed4ff", description: "斬撃が氷の刃になる" },
     special2: { id: "warrior_special_thunder", name: "斬撃・雷", effectColor: "#ffd400", description: "斬撃が雷の刃になる" }
   }),
@@ -147,6 +153,8 @@ export const skins: Skin[] = [
     goldName: "金道着",
     rare2Name: "虹道着",
     rare2Color: COLORS.rainbow,
+    goldImageUrl: "/skins/monk_daichi_gold.png",
+    rare2ImageUrl: "/skins/monk_daichi_rainbow.png",
     special1: { id: "monk_special_flash", name: "正拳・閃光", effectColor: "#ffffaa", description: "正拳が閃光をはなつ" },
     special2: { id: "monk_special_afterimage", name: "正拳・残像", effectColor: "#aaaaff", description: "正拳に残像がうつる" }
   }),
@@ -154,6 +162,8 @@ export const skins: Skin[] = [
     goldName: "ゴールド",
     rare2Name: "レインボー",
     rare2Color: COLORS.rainbow,
+    goldImageUrl: "/skins/mage_nayu_gold.png",
+    rare2ImageUrl: "/skins/mage_nayu_rainbow.png",
     special1: { id: "mage_special_blueflame", name: "ファイア・蒼炎", effectColor: "#3aa1ff", description: "ファイアが青いほのおになる" },
     special2: { id: "mage_special_purpleflame", name: "ファイア・紫炎", effectColor: "#bb44ff", description: "ファイアが紫のほのおになる" }
   }),
@@ -161,6 +171,8 @@ export const skins: Skin[] = [
     goldName: "ゴールド",
     rare2Name: "虹サングラス",
     rare2Color: COLORS.rainbow,
+    goldImageUrl: "/skins/youtuber_gold.png",
+    rare2ImageUrl: "/skins/youtuber_rainbow.png",
     special1: { id: "youtuber_special_thunder", name: "収録・電撃", effectColor: "#ffd400", description: "しゅうろくが電撃をまとう" },
     special2: { id: "youtuber_special_redlight", name: "収録・赤光", effectColor: "#ff3a3a", description: "しゅうろくが赤い光をはなつ" }
   })

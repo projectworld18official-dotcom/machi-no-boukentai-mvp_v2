@@ -30,6 +30,10 @@ const rarityCapsuleClass = (r: Rarity): string => `rarity${r}`;
 
 export default function GachaScreen({ gems, skins, onPullComplete, back }: Props) {
   const [latest, setLatest] = useState<GachaPullResult[]>([]);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const handleImgError = (key: string): void => {
+    setImgErrors((prev) => ({ ...prev, [key]: true }));
+  };
 
   useEffect(() => {
     playBGM("home");
@@ -79,9 +83,10 @@ export default function GachaScreen({ gems, skins, onPullComplete, back }: Props
           if (!skin) return null;
           const charDisplay = skin.charId === "hero" ? "🦸" : jobsMaster[skin.charId].emoji;
           const isGradient = (skin.bodyColor ?? "").startsWith("linear-gradient");
+          const capsuleKey = `${p.skinId}-${i}`;
           return (
             <div
-              key={`${p.skinId}-${i}`}
+              key={capsuleKey}
               className={`capsule ${rarityCapsuleClass(p.rarity)} ${rarityClassname(p.rarity)}`}
               style={{
                 background: isGradient
@@ -90,7 +95,16 @@ export default function GachaScreen({ gems, skins, onPullComplete, back }: Props
                 opacity: p.duplicate ? 0.65 : 1
               }}
             >
-              <div className="big">{charDisplay}</div>
+              {skin.imageUrl && !imgErrors[capsuleKey] ? (
+                <img
+                  src={skin.imageUrl}
+                  alt={skin.name}
+                  className="capsuleSprite"
+                  onError={() => handleImgError(capsuleKey)}
+                />
+              ) : (
+                <div className="big">{charDisplay}</div>
+              )}
               <div>{skin.name}</div>
               <div>★{skin.rarity} {rarityLabel(p.rarity)}</div>
               {p.duplicate && (
