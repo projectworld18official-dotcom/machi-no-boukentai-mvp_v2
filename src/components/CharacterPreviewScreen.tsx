@@ -7,7 +7,7 @@ import type {
   SkinsState,
   SkinSlot
 } from "../types";
-import { heroMaster, jobsMaster, memberDisplayName } from "../data/jobs";
+import { heroMaster, jobsMaster, memberDisplayName, memberSpriteUrl } from "../data/jobs";
 import { skinsByCharSlot, getSkin } from "../data/skins";
 import { playSE } from "../utils/audio";
 
@@ -37,6 +37,7 @@ export default function CharacterPreviewScreen({
 }: Props) {
   const [tab, setTab] = useState<SkinSlot>("body");
   const [silentMessage, setSilentMessage] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   const isHero = memberId === "hero";
   const emoji = isHero ? heroMaster.emoji : jobsMaster[memberId].emoji;
@@ -62,6 +63,7 @@ export default function CharacterPreviewScreen({
 
   const previewBg = equippedBodySkin?.bodyColor ?? "#5b8def";
   const previewIsGradient = previewBg.startsWith("linear-gradient");
+  const previewSpriteUrl = equippedBodySkin?.imageUrl ?? memberSpriteUrl(memberId);
 
   return (
     <div className="card screen">
@@ -76,7 +78,16 @@ export default function CharacterPreviewScreen({
       >
         {isHero && <span className="heroTag">主人公</span>}
         <span className="lvBadge">Lv.{lv}</span>
-        <div className="previewEmoji">{emoji}</div>
+        {previewSpriteUrl && !imgError ? (
+          <img
+            src={previewSpriteUrl}
+            alt={name}
+            className="previewSprite"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="previewEmoji">{emoji}</div>
+        )}
         <div className="previewName">{name}</div>
         {equippedSpecialSkin && (
           <div

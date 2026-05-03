@@ -27,9 +27,16 @@ from pathlib import Path
 from datetime import datetime
 
 # dotenv は python-dotenv パッケージ
+# プロジェクト直下の .env を優先し、なければ親ディレクトリの .env を読み込む
 try:
     from dotenv import load_dotenv
-    load_dotenv(override=True)
+    _env_path = Path(".env")
+    if not _env_path.exists():
+        _env_path = Path("../.env")
+    if _env_path.exists():
+        load_dotenv(str(_env_path), override=True)
+    else:
+        load_dotenv(override=True)  # 環境変数のみ
 except ImportError:
     print("⚠️ python-dotenv が見つかりません。pip install python-dotenv で入れてください。")
 
@@ -45,8 +52,8 @@ except ImportError:
 # 設定
 # ============================================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-IMAGEN_MODEL = "imagen-3.0-generate-001"  # 実際に利用可能な Imagen モデル
-JUDGE_MODEL = "gemini-2.0-flash"           # 判定用テキスト+ビジョンモデル
+IMAGEN_MODEL = "imagen-4.0-fast-generate-001"  # Imagen 4 Fast、$0.02/画像
+JUDGE_MODEL = "gemini-2.0-flash"          # 判定用テキスト+ビジョンモデル
 
 CHARS_DIR = Path("public/characters")
 SKINS_DIR = Path("public/skins")

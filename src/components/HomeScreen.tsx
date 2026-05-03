@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { HeroState, JobsState, PartyState, SkinsState } from "../types";
-import { memberDisplayName, memberEmoji } from "../data/jobs";
+import { memberDisplayName, memberEmoji, memberSpriteUrl } from "../data/jobs";
 import { getSkin } from "../data/skins";
 import { playBGM, playSE, stopBGM, unlockAudio } from "../utils/audio";
 
@@ -39,6 +39,11 @@ export default function HomeScreen({
     onMove(screen);
   };
 
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const handleImgError = (key: string): void => {
+    setImgErrors((prev) => ({ ...prev, [key]: true }));
+  };
+
   const partyMembers = [party.member1, party.member2, party.member3].filter(
     (m): m is "hero" | "warrior" | "monk" | "mage" | "youtuber" => m !== null
   );
@@ -65,6 +70,7 @@ export default function HomeScreen({
           const equippedBodyId = skins.equipped[m]?.body ?? null;
           const equippedBodySkin = getSkin(equippedBodyId);
           const cardBg = equippedBodySkin?.bodyColor ?? "#5b8def";
+          const spriteUrl = equippedBodySkin?.imageUrl ?? memberSpriteUrl(m);
           return (
             <div
               key={m}
@@ -73,7 +79,16 @@ export default function HomeScreen({
             >
               {isHero && <span className="heroTag">主人公</span>}
               <span className="lvBadge">Lv.{lv}</span>
-              <div className="charCardEmoji">{emoji}</div>
+              {spriteUrl && !imgErrors[m] ? (
+                <img
+                  src={spriteUrl}
+                  alt={name}
+                  className="charCardSprite"
+                  onError={() => handleImgError(m)}
+                />
+              ) : (
+                <div className="charCardEmoji">{emoji}</div>
+              )}
               <div className="charCardName">{name}</div>
             </div>
           );
