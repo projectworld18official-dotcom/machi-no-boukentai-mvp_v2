@@ -53,7 +53,7 @@ except ImportError:
 # ============================================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 IMAGEN_MODEL = "imagen-4.0-fast-generate-001"  # Imagen 4 Fast、$0.02/画像
-JUDGE_MODEL = "gemini-2.0-flash"          # 判定用テキスト+ビジョンモデル
+JUDGE_MODEL = "gemini-2.5-flash"          # 判定用テキスト+ビジョンモデル
 
 CHARS_DIR = Path("public/characters")
 SKINS_DIR = Path("public/skins")
@@ -166,8 +166,6 @@ def generate_single_image(client, sdk_type: str, prompt: str, aspect_ratio: str 
                     config=genai_types.GenerateImagesConfig(
                         number_of_images=1,
                         aspect_ratio=aspect_ratio,
-                        safety_filter_level="block_low_and_above",
-                        person_generation="allow_adult",
                     ),
                 )
                 if response.generated_images:
@@ -231,11 +229,9 @@ def generate_multi_images(client, sdk_type: str, prompt: str, count: int, aspect
                 config=genai_types.GenerateImagesConfig(
                     number_of_images=min(count, 4),
                     aspect_ratio=aspect_ratio,
-                    safety_filter_level="block_low_and_above",
-                    person_generation="allow_adult",
                 ),
             )
-            for gi in response.generated_images:
+            for gi in (response.generated_images or []):
                 results.append(gi.image.image_bytes)
         except Exception as e:
             err_str = str(e)
