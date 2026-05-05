@@ -55,8 +55,6 @@ interface Props {
   back: () => void;
 }
 
-const STAGE_CLEAR_MS = 700;
-
 interface PendingPopup {
   id: number;
   actorId: string;
@@ -172,6 +170,10 @@ export default function BattleScreen({
   const popupId = useRef(0);
   const [flashId, setFlashId] = useState<string | null>(null);
   const finishedRef = useRef(false);
+  // ステージクリア「次へ」ボタン制御 (1.5s連打抑制)
+  const [stageResult, setStageResult] = useState<BattleResult | null>(null);
+  const [nextButtonEnabled, setNextButtonEnabled] = useState(false);
+  const nextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // レベルアップ派手演出 (Phase 2d-3)
   const [levelUpEffect, setLevelUpEffect] = useState<{ visible: boolean; color: string; charName: string } | null>(null);
   const [allyImgErrors, setAllyImgErrors] = useState<Record<string, boolean>>({});
@@ -479,9 +481,33 @@ export default function BattleScreen({
       maxMp: a.maxMp
     }));
 
-    setTimeout(() => {
-      onFinish({ outcome, expGain, allyFinal });
-    }, outcome === "victory" ? STAGE_CLEAR_MS + 300 : 1200);
+    const result: BattleResult = { outcome, expGain, allyFinal };
+
+    if (outcome === "victory") {
+      // 勝利: 「次へ」ボタンを 1.5 秒間 disabled にして連打スキップ抑制
+      setStageResult(result);
+      setNextButtonEnabled(false);
+      nextTimerRef.current = setTimeout(() => setNextButtonEnabled(true), 1500);
+    } else {
+      // 敗北: 自動で画面を戻す
+      setTimeout(() => {
+        onFinish(result);
+      }, 1200);
+    }
+  };
+
+  // 「次へ」ボタン押下 → 次ステージへ
+  const handleNextStage = (): void => {
+    if (nextTimerRef.current) clearTimeout(nextTimerRef.current);
+    if (stageResult) onFinish(stageResult);
+  };
+
+  // 暗転オーバーレイタップ → ロック残時間を 400ms に短縮 (スキップ)
+  const handleStageClearTap = (): void => {
+    if (!nextButtonEnabled && nextTimerRef.current !== null) {
+      clearTimeout(nextTimerRef.current);
+      nextTimerRef.current = setTimeout(() => setNextButtonEnabled(true), 400);
+    }
   };
 
   const handleBack = (): void => {
@@ -660,8 +686,15 @@ export default function BattleScreen({
 
       {phase === "stageClear" && (
         <>
-          <div className="stageClearOverlay" />
+          <div className="stageClearOverlay" onClick={handleStageClearTap} />
           <div className="stageClearText">ステージクリア！</div>
+          <button
+            className="stageClearNextBtn"
+            disabled={!nextButtonEnabled}
+            onClick={handleNextStage}
+          >
+            次へ →
+          </button>
         </>
       )}
       {phase === "defeated" && (
