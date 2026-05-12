@@ -77,7 +77,7 @@ const initial = (): SaveData => {
   return {
     version: CURRENT_VERSION,
     ownedIds: allIds,
-    selectedId: "mio",
+    selectedId: allIds[0] || "",
     levels: baseLevels,
     gems: 500,
     battleStage: 1,
@@ -127,7 +127,7 @@ const migrate = (raw: unknown): SaveData => {
   const version = typeof r.version === "number" ? r.version : 1;
 
   // 共通フィールド抽出
-  const ownedIds = Array.isArray(r.ownedIds) ? (r.ownedIds as string[]) : ["mio"];
+  const ownedIds = Array.isArray(r.ownedIds) ? (r.ownedIds as string[]) : characters.map(c => c.id);
   const oldLevels: Record<string, number> = { ...((r.levels as Record<string, number>) ?? {}) };
   ownedIds.forEach((id) => {
     if (typeof oldLevels[id] !== "number") oldLevels[id] = 1;
@@ -135,7 +135,7 @@ const migrate = (raw: unknown): SaveData => {
   const selectedId =
     typeof r.selectedId === "string" && ownedIds.includes(r.selectedId)
       ? r.selectedId
-      : ownedIds[0] ?? "mio";
+      : ownedIds[0] ?? "";
   const gems = typeof r.gems === "number" ? r.gems : 500;
   const battleStage = typeof r.battleStage === "number" ? r.battleStage : 1;
   const gachaHistory = Array.isArray(r.gachaHistory) ? (r.gachaHistory as string[]) : [];
