@@ -403,6 +403,7 @@ button:disabled {
 }
 
 .lvBadge {
+  z-index: 10;
   position: absolute;
   top: 4px;
   right: 4px;

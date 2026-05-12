@@ -36,8 +36,6 @@ interface Props {
   back: () => void;
 }
 
-const STAGE_CLEAR_MS = 700;
-
 interface PendingPopup {
   id: number;
   actorId: string;
@@ -153,6 +151,8 @@ export default function BattleScreen({
   const popupId = useRef(0);
   const [flashId, setFlashId] = useState<string | null>(null);
   const finishedRef = useRef(false);
+  const [canSkipResult, setCanSkipResult] = useState(false);
+  const [battleResult, setBattleResult] = useState<BattleResult | null>(null);
 
   useEffect(() => {
     playBGM("battle");
@@ -423,6 +423,10 @@ export default function BattleScreen({
     finishedRef.current = true;
     setPhase(outcome === "victory" ? "stageClear" : "defeated");
 
+    setTimeout(() => {
+      setCanSkipResult(true);
+    }, 800);
+
     if (outcome === "victory") {
       playSE("victory");
       playSE("levelup");
@@ -444,15 +448,18 @@ export default function BattleScreen({
       maxMp: a.maxMp
     }));
 
-    setTimeout(() => {
-      onFinish({ outcome, expGain, allyFinal });
-    }, outcome === "victory" ? STAGE_CLEAR_MS + 300 : 1200);
+    setBattleResult({ outcome, expGain, allyFinal });
   };
 
   const handleBack = (): void => {
-    if (phase === "executing" || phase === "stageClear") return;
+    if (phase === "executing") return;
     playSE("cancel");
     back();
+  };
+
+  const handleResultNext = (): void => {
+    if (!canSkipResult || !battleResult) return;
+    onFinish(battleResult);
   };
 
   // === 描画 ===
@@ -607,12 +614,15 @@ export default function BattleScreen({
         </div>
       )}
 
-      <button onClick={handleBack} disabled={phase === "executing" || phase === "stageClear"}>もどる</button>
+      {phase !== "stageClear" && phase !== "defeated" && (
+        <button onClick={handleBack} disabled={phase === "executing"}>もどる</button>
+      )}
 
       {phase === "stageClear" && (
         <>
           <div className="stageClearOverlay" />
           <div className="stageClearText">ステージクリア！</div>
+          <button className="stageClearSkip" onClick={handleResultNext} disabled={!canSkipResult}>次へ</button>
         </>
       )}
       {phase === "defeated" && (
@@ -621,6 +631,7 @@ export default function BattleScreen({
           <div className="stageClearText" style={{ color: "#ff4444", textShadow: "0 0 8px #800" }}>
             ぜんめつ…
           </div>
+          <button className="stageClearSkip" onClick={handleResultNext} disabled={!canSkipResult}>もどる</button>
         </>
       )}
     </div>
