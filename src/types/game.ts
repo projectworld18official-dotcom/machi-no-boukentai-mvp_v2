@@ -1,0 +1,5 @@
+export type Gender = 'male' | 'female';
+export type GameScreen = 'title' | 'character-create' | 'field' | 'battle';
+export interface Player { name: string; gender: Gender; level: number; hp: number; maxHp: number; mp: number; maxMp: number; }
+export interface PartyMember { id: string; name: string; job: string; level: number; hp: number; maxHp: number; mp: number; maxMp: number; joined: boolean; }
+export interface GameState { screen: GameScreen; player: Player | null; party: PartyMember[]; currentIsland: number; currentLocation: 'village' | 'town' | 'dungeon' | 'field'; }
