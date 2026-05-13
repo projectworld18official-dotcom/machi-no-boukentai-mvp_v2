@@ -63,6 +63,13 @@ export const useGameState = () => {
   const setBossFlag = (v: boolean) =>
     setState(prev => ({ ...prev, isBossFlag: v }));
 
+  const clearIsland = (n: number) => {
+    setState(prev => ({
+      ...prev,
+      clearedIslands: [...(prev.clearedIslands ?? []), n],
+    }));
+  };
+
   const saveGame = () => {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
@@ -83,5 +90,5 @@ export const useGameState = () => {
     }
   };
 
-  return { state, startNewGame, goToScreen, addRewards, setBossFlag, saveGame, loadGame };
+  return { state, startNewGame, goToScreen, addRewards, setBossFlag, clearIsland, saveGame, loadGame };
 };
