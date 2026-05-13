@@ -14,4 +14,4 @@ export interface Player {
   gold: number;
 }
 export interface PartyMember { id: string; name: string; job: string; level: number; hp: number; maxHp: number; mp: number; maxMp: number; joined: boolean; }
-export interface GameState { screen: GameScreen; player: Player | null; party: PartyMember[]; currentIsland: number; currentLocation: 'village' | 'town' | 'dungeon' | 'field'; }
+export interface GameState { screen: GameScreen; player: Player | null; party: PartyMember[]; currentIsland: number; currentLocation: 'village' | 'town' | 'dungeon' | 'field'; isBossFlag?: boolean; currentDungeonFloor?: number; }

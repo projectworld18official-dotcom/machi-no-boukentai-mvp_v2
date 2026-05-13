@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { GameState, PartyMember } from '../types/game';
 
+const SAVE_KEY = 'hamano_save';
+
 const initialParty: PartyMember[] = [
   { id: 'you', name: 'ヨウ', job: '戦士', level: 1, hp: 45, maxHp: 45, mp: 0, maxMp: 0, joined: false },
 ];
@@ -58,5 +60,28 @@ export const useGameState = () => {
     });
   };
 
-  return { state, startNewGame, goToScreen, addRewards };
+  const setBossFlag = (v: boolean) =>
+    setState(prev => ({ ...prev, isBossFlag: v }));
+
+  const saveGame = () => {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.error('Save failed:', e);
+    }
+  };
+
+  const loadGame = (): boolean => {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const saved = JSON.parse(raw) as GameState;
+      setState(saved);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  return { state, startNewGame, goToScreen, addRewards, setBossFlag, saveGame, loadGame };
 };
