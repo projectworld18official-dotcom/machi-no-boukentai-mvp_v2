@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AreaSelectScreen from "./components/AreaSelectScreen";
 import BattleScreen, { type BattleResult } from "./components/BattleScreen";
 import CharacterPreviewScreen from "./components/CharacterPreviewScreen";
 import CharacterSelectScreen from "./components/CharacterSelectScreen";
@@ -6,10 +7,13 @@ import DebugMenu from "./components/DebugMenu";
 import GachaScreen from "./components/GachaScreen";
 import HeroNameModal from "./components/HeroNameModal";
 import HomeScreen from "./components/HomeScreen";
+import MapScreen from "./components/MapScreen";
 import PartySetupScreen from "./components/PartySetupScreen";
 import FirstLoginModal from "./components/FirstLoginModal";
 import { useGameState } from "./hooks/useGameState";
 import { heroStats, jobStats } from "./data/jobs";
+import { MAPS, MAP_ENEMY_DEFS, type MapEnemySpawn } from "./data/mapData";
+import type { ActorState } from "./logic/battleTypes";
 import type {
   EquippedSkins,
   JobsState,
@@ -26,7 +30,9 @@ type Screen =
   | "characterSelect"
   | "characterPreview"
   | "partySetup"
-  | "debug";
+  | "debug"
+  | "area-select"
+  | "map";
 
 const DEBUG_KEY = "kakakayoyoyo-debug";
 const DEBUG_FLAG = "debugUnlocked";
@@ -94,6 +100,22 @@ const applyExpToJob = (
   };
 };
 
+const buildMapEnemy = (spawn: MapEnemySpawn): ActorState => {
+  const def = MAP_ENEMY_DEFS[spawn.enemyType];
+  return {
+    id: "enemy_0",
+    side: "enemy",
+    displayName: def.name,
+    emoji: def.symbol,
+    level: def.level,
+    hp: def.hp,
+    maxHp: def.hp,
+    attack: def.attack,
+    defense: def.defense,
+    speed: def.speed,
+  };
+};
+
 export default function App() {
   const { data, setData } = useGameState();
   const [screen, setScreen] = useState<Screen>("home");
@@ -103,6 +125,12 @@ export default function App() {
   const [debugUnlocked, setDebugUnlocked] = useState<boolean>(
     () => localStorage.getItem(DEBUG_FLAG) === "true"
   );
+
+  // マップ歩行システム state
+  const [currentMapId, setCurrentMapId] = useState<string>("minato-mirai");
+  const [defeatedEnemyIds, setDefeatedEnemyIds] = useState<string[]>([]);
+  const [clearedMapIds, setClearedMapIds] = useState<string[]>([]);
+  const [pendingMapEnemy, setPendingMapEnemy] = useState<MapEnemySpawn | null>(null);
 
   // URLパラメータ ?debug=kakakayoyoyo-debug でデバッグメニュー有効化 (司令官専用)
   useEffect(() => {
@@ -186,10 +214,13 @@ export default function App() {
   };
 
   const handleBattleFinish = (result: BattleResult): void => {
+    const isMapBattle = pendingMapEnemy !== null;
+
     if (result.outcome === "victory") {
       let newHero = { ...data.hero };
       let newJobs: JobsState = { ...data.jobs };
 
+      // HP/MP を戦闘後の値に更新 (通常・マップ共通)
       result.allyFinal.forEach((af) => {
         if (af.memberId === "hero") {
           newHero = { ...newHero, hp: af.hp, maxHp: af.maxHp };
@@ -221,7 +252,7 @@ export default function App() {
         }
       });
 
-      // EXP 配分
+      // EXP 配分 (通常・マップ共通)
       newHero = applyExpToHero(newHero, result.expGain);
       result.allyFinal.forEach((af) => {
         if (af.memberId !== "hero") {
@@ -229,27 +260,49 @@ export default function App() {
         }
       });
 
-      // gems 計算: 基本勝利 + ステージ初回クリアボーナス
-      const enemiesCount = result.allyFinal.length; // パーティ人数 (敵数の代理として stage で算出)
-      const stageId = String(data.battleStage);
-      const isFirstClear = !data.rewards.stagesCleared[stageId];
-      const battleGems = Math.floor(data.battleStage * 3 + enemiesCount * 5);
-      const stageBonusGems = isFirstClear ? 30 : 0;
+      if (isMapBattle) {
+        // マップバトル: ステージ進行なし、gems なし
+        setData({ ...data, hero: newHero, jobs: newJobs });
 
-      const stagesCleared = { ...data.rewards.stagesCleared };
-      if (isFirstClear) stagesCleared[stageId] = true;
+        const newDefeated = [...defeatedEnemyIds, pendingMapEnemy!.id];
+        setDefeatedEnemyIds(newDefeated);
 
-      setData({
-        ...data,
-        gems: data.gems + battleGems + stageBonusGems,
-        battleStage: data.battleStage + 1,
-        hero: newHero,
-        jobs: newJobs,
-        rewards: { ...data.rewards, stagesCleared }
-      });
+        // エリアクリア判定
+        const currentMap = MAPS.find((m) => m.id === currentMapId);
+        if (
+          currentMap &&
+          currentMap.enemies.every((e) => newDefeated.includes(e.id)) &&
+          !clearedMapIds.includes(currentMapId)
+        ) {
+          setClearedMapIds((prev) => [...prev, currentMapId]);
+        }
 
-      if (isFirstClear) {
-        setStageBonus({ stage: data.battleStage, gems: stageBonusGems });
+        setPendingMapEnemy(null);
+        setScreen("map");
+      } else {
+        // 通常バトル: ステージ進行 + gems 獲得
+        const enemiesCount = result.allyFinal.length;
+        const stageId = String(data.battleStage);
+        const isFirstClear = !data.rewards.stagesCleared[stageId];
+        const battleGems = Math.floor(data.battleStage * 3 + enemiesCount * 5);
+        const stageBonusGems = isFirstClear ? 30 : 0;
+
+        const stagesCleared = { ...data.rewards.stagesCleared };
+        if (isFirstClear) stagesCleared[stageId] = true;
+
+        setData({
+          ...data,
+          gems: data.gems + battleGems + stageBonusGems,
+          battleStage: data.battleStage + 1,
+          hero: newHero,
+          jobs: newJobs,
+          rewards: { ...data.rewards, stagesCleared }
+        });
+
+        if (isFirstClear) {
+          setStageBonus({ stage: data.battleStage, gems: stageBonusGems });
+        }
+        setScreen("home");
       }
     } else {
       // 敗北: HP は満タン復活、MP も 30% 回復に統一 (Phase 2c-1 reviewer 指摘#9-A 対応)
@@ -270,8 +323,14 @@ export default function App() {
         youtuber: { ...data.jobs.youtuber, hp: data.jobs.youtuber.maxHp }
       };
       setData({ ...data, hero: newHero, jobs: newJobs });
+
+      if (isMapBattle) {
+        setPendingMapEnemy(null);
+        setScreen("map");
+      } else {
+        setScreen("home");
+      }
     }
-    setScreen("home");
   };
 
   const showNameModal = !data.hero.nameSet;
@@ -301,6 +360,7 @@ export default function App() {
       {!showNameModal && screen === "home" && (
         <HomeScreen
           onMove={(s) => setScreen(s as Screen)}
+          onAdventure={() => setScreen("area-select")}
           hero={data.hero}
           jobs={data.jobs}
           party={data.party}
@@ -332,15 +392,56 @@ export default function App() {
 
       {!showNameModal && screen === "battle" && (
         <BattleScreen
-          key={data.battleStage}
+          key={pendingMapEnemy ? pendingMapEnemy.id : data.battleStage}
           hero={data.hero}
           jobs={data.jobs}
           party={data.party}
           stage={data.battleStage}
+          mapEnemies={pendingMapEnemy ? [buildMapEnemy(pendingMapEnemy)] : undefined}
           onFinish={handleBattleFinish}
-          back={() => setScreen("home")}
+          back={() => {
+            if (pendingMapEnemy) {
+              setPendingMapEnemy(null);
+              setScreen("map");
+            } else {
+              setScreen("home");
+            }
+          }}
         />
       )}
+
+      {!showNameModal && screen === "area-select" && (
+        <AreaSelectScreen
+          clearedMapIds={clearedMapIds}
+          onSelect={(mapId) => {
+            setCurrentMapId(mapId);
+            setScreen("map");
+          }}
+          onBack={() => setScreen("home")}
+        />
+      )}
+
+      {!showNameModal && screen === "map" && (() => {
+        const currentMap = MAPS.find((m) => m.id === currentMapId) ?? MAPS[0];
+        return (
+          <MapScreen
+            key={currentMapId}
+            mapId={currentMapId}
+            map={currentMap}
+            defeatedEnemyIds={defeatedEnemyIds}
+            onEncounter={(enemy) => {
+              setPendingMapEnemy(enemy);
+              setScreen("battle");
+            }}
+            onAreaClear={(mapId) => {
+              setClearedMapIds((prev) =>
+                prev.includes(mapId) ? prev : [...prev, mapId]
+              );
+            }}
+            onBack={() => setScreen("area-select")}
+          />
+        );
+      })()}
 
       {!showNameModal && screen === "gacha" && (
         <GachaScreen

@@ -6,6 +6,7 @@ import { playBGM, playSE, stopBGM, unlockAudio } from "../utils/audio";
 
 interface Props {
   onMove: (screen: string) => void;
+  onAdventure: () => void;
   hero: HeroState;
   jobs: JobsState;
   party: PartyState;
@@ -17,6 +18,7 @@ interface Props {
 
 export default function HomeScreen({
   onMove,
+  onAdventure,
   hero,
   jobs,
   party,
@@ -81,6 +83,12 @@ export default function HomeScreen({
       </div>
 
       <button onClick={() => go("partySetup")}>👥 パーティ編成</button>
+      <button
+        onClick={async () => { await unlockAudio(); playSE("decision"); onAdventure(); }}
+        disabled={partyMembers.length < 2}
+      >
+        🗺 冒険に出る
+      </button>
       <button onClick={() => go("battle")} disabled={partyMembers.length < 2}>
         ⚔️ バトル
       </button>
